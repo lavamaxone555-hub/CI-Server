@@ -1,18 +1,17 @@
 # Next Autonomous Task
 
-## Phase 4 Milestone 2
-Transactional Persistence & Inventory Audit Boundary
+## CI Activation
+1. Create or select a remote Git repository.
+2. Add it as origin.
+3. Push the current branch history.
+4. Verify the first GitHub Actions run.
+5. Record the run result in PROJECT_STATUS.md.
 
-## Objective
-Prepare a persistence abstraction that can support SQLite later while preserving the current in-memory domain.
-
-## Steps
-1. Define transaction/persistence interfaces.
-2. Define inventory movement repository boundary.
-3. Ensure checkout failure handling is explicit and testable.
-4. Add tests for application boundaries.
-5. Run tests -> typecheck -> build.
-6. Update PROJECT_STATUS.md with factual results.
+## Then
+Continue Phase 4:
+- UI -> application service integration
+- loading / empty / error states
+- transactional workflow tests
 
 ## Completion
-Complete only after all quality gates pass.
+Do not claim server-side CI is active until a real remote run passes.
