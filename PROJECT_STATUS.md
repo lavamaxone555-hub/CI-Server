@@ -20,22 +20,30 @@ Phase 4 — Production Architecture & Real Workflows
 - Build: PASS
 - Git commit: 71998c7
 
+### Milestone 3 — UI Resilience & Application Integration
+- COMPLETE
+- Loading, empty, success, and error states integrated
+- Retry feedback integrated
+- Operation execution boundary integrated
+- Tests: PASS
+- Typecheck: PASS
+- Build: PASS
+- Git commits: 34d394c, 0d038b5, b248660
+
 ### Development Automation Baseline
 - Git repository initialized
 - Branch workflow established
-- .gitignore added for dependencies, build artifacts, databases, and environment files
 - npm run verify added
 - GitHub Actions workflow added
 - Local verify: PASS
 
 ## Current Limitation
-GitHub Actions will run on a server only after this local repository is connected to a Git remote and pushed. Remote account/repository authorization is not available in the current workspace.
+Server CI activation requires an authorized Git remote and first push. Do not claim server CI is active until a real remote run passes.
 
 ## Next Priority
-1. Connect an authorized Git remote.
-2. Push main/feature branches.
-3. Verify first server-side CI run.
-4. Continue Phase 4 with UI integration and resilience states.
+1. Prepare Phase 4 production hardening: persistence adapter and integration tests.
+2. Connect authorized Git remote.
+3. Push branch history and verify first server-side CI run.
 
 ## Rule
-Never mark server CI as verified until an actual remote CI run passes.
+Inspect -> Implement -> Test -> Typecheck -> Build -> Commit -> Update Status -> Next Task.
