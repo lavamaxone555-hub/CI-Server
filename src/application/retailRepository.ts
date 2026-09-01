@@ -5,3 +5,9 @@ export interface RetailRepository {
   deleteSale(id: string): void
   findSale(id: string): Sale | undefined
 }
+
+export interface TransactionalRetailRepository extends RetailRepository {
+  begin(): void
+  commit(): void
+  rollback(): void
+}
