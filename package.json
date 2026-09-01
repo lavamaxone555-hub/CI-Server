@@ -13,6 +13,7 @@
     "verify": "npm run test && npm run typecheck && npm run build"
   },
   "dependencies": {
+    "pg": "^8.23.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
