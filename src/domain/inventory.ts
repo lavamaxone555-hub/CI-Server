@@ -29,3 +29,18 @@ export function moveInventory(input: Omit<InventoryMovement, 'id' | 'createdAt'>
 }
 
 export function inventoryMovements() { return [...movements] }
+
+export function snapshotInventoryState() {
+  return {
+    quantities: retailStore.inventory.map((item) => ({ productId: item.productId, branchId: item.branchId, quantity: item.quantity })),
+    movements: [...movements],
+  }
+}
+
+export function restoreInventoryState(snapshot: ReturnType<typeof snapshotInventoryState>) {
+  for (const saved of snapshot.quantities) {
+    const stock = retailStore.inventory.find((item) => item.productId === saved.productId && item.branchId === saved.branchId)
+    if (stock) stock.quantity = saved.quantity
+  }
+  movements.splice(0, movements.length, ...snapshot.movements)
+}

@@ -9,3 +9,5 @@ export function recordPayment(input: Omit<Payment, 'id' | 'status'>) {
   return payment
 }
 export function paymentsForSale(saleId: string) { return payments.filter(p => p.saleId === saleId) }
+export function snapshotPayments() { return [...payments] }
+export function restorePayments(snapshot: Payment[]) { payments.splice(0, payments.length, ...snapshot) }
