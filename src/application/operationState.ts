@@ -11,3 +11,7 @@ export function success<T>(data: T): OperationResult<T> {
 export function failure(message: string): OperationResult<never> {
   return { state: 'error', message }
 }
+
+export function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Operation failed'
+}
