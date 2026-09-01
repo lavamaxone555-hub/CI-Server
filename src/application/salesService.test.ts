@@ -4,6 +4,7 @@ import { retailStore } from '../domain/retailStore'
 import { inventoryMovements } from '../domain/inventory'
 import { paymentsForSale } from '../domain/payment'
 import { inMemoryRetailRepository } from './inMemoryRetailRepository'
+import { getImei, registerImei } from '../domain/imei'
 import type { TransactionalRetailRepository } from './retailRepository'
 
 describe('Sales application service', () => {
@@ -68,3 +69,18 @@ function makeFailingRepository(): TransactionalRetailRepository & { commits: num
   result.saveSale = () => { throw new Error('persistence failed') }
   return result
 }
+
+it('rolls back IMEI status when persistence fails', function () {
+  const imei = ('999' + Date.now()).slice(-15)
+  registerImei({ imei, productId: 'prd_001', branchId: 'branch_main', status: 'in_stock' })
+  const repository = makeFailingRepository()
+  expect(() => checkoutSale({
+    tenantId: retailStore.tenant.id,
+    branchId: 'branch_main',
+    items: [{ productId: 'prd_001', name: 'iPhone 15 128GB', qty: 1, unitPrice: 29900, discount: 0, imei }],
+    paid: 32000,
+    paymentMethod: 'cash',
+  }, repository)).toThrow('persistence failed')
+  expect(getImei(imei)?.status).toBe('in_stock')
+  expect(repository.rollbacks).toBe(1)
+})

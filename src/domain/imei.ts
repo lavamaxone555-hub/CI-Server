@@ -19,3 +19,6 @@ export function setImeiStatus(imei: string, status: ImeiStatus) {
   unit.status = status
   return unit
 }
+
+export function snapshotImeiState() { return [...units.entries()].map(([imei, unit]) => [imei, { ...unit }] as const) }
+export function restoreImeiState(snapshot: ReturnType<typeof snapshotImeiState>) { units.clear(); for (const [imei, unit] of snapshot) units.set(imei, { ...unit }) }

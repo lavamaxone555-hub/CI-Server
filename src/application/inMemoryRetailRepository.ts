@@ -1,6 +1,7 @@
 import { retailStore } from '../domain/retailStore'
 import { restoreInventoryState, snapshotInventoryState } from '../domain/inventory'
 import { restorePayments, snapshotPayments, type Payment } from '../domain/payment'
+import { restoreImeiState, snapshotImeiState } from '../domain/imei'
 import type { Sale } from '../domain/retail'
 import type { TransactionalRetailRepository } from './retailRepository'
 
@@ -8,6 +9,7 @@ let transactionSnapshot: {
   sales: Sale[]
   inventory: ReturnType<typeof snapshotInventoryState>
   payments: Payment[]
+  imei: ReturnType<typeof snapshotImeiState>
 } | undefined
 
 export const inMemoryRetailRepository: TransactionalRetailRepository = {
@@ -17,6 +19,7 @@ export const inMemoryRetailRepository: TransactionalRetailRepository = {
       sales: [...retailStore.sales],
       inventory: snapshotInventoryState(),
       payments: snapshotPayments(),
+      imei: snapshotImeiState(),
     }
   },
   commit() {
@@ -27,6 +30,7 @@ export const inMemoryRetailRepository: TransactionalRetailRepository = {
     retailStore.sales.splice(0, retailStore.sales.length, ...transactionSnapshot.sales)
     restoreInventoryState(transactionSnapshot.inventory)
     restorePayments(transactionSnapshot.payments)
+    restoreImeiState(transactionSnapshot.imei)
     transactionSnapshot = undefined
   },
   saveSale(sale) {
