@@ -12,6 +12,11 @@ export async function checkPostgresReadiness(pool: PostgresPool): Promise<Postgr
     const health = await checkPostgresHealth(pool)
     return { ready: true, latencyMs: health.latencyMs }
   } catch (error) {
-    return { ready: false, reason: error instanceof Error ? error.message : 'database unavailable' }
+    return {
+      ready: false,
+      reason: error instanceof Error && error.message.trim()
+        ? error.message
+        : 'database unavailable',
+    }
   }
 }

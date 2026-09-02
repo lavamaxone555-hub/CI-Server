@@ -11,4 +11,9 @@ describe('PostgreSQL readiness', () => {
     await expect(checkPostgresReadiness({ query: async () => { throw new Error('connection refused') }, end: async () => undefined }))
       .resolves.toEqual({ ready: false, reason: 'connection refused' })
   })
+
+  it('uses a stable fallback reason for non-Error failures', async () => {
+    await expect(checkPostgresReadiness({ query: async () => { throw 'offline' }, end: async () => undefined }))
+      .resolves.toEqual({ ready: false, reason: 'database unavailable' })
+  })
 })
