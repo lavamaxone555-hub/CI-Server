@@ -8,6 +8,7 @@ import {
   assertMigrationsAvailable,
 } from './migrationSafety'
 import { createPostgresMigrationExecutor } from './postgresMigrationExecutor'
+import { withPostgresMigrationLock } from './postgresMigrationLock'
 import { createPostgresPool, verifyPostgresConnection, type PostgresPool } from './postgresDatabase'
 
 export async function initializePostgresDatabase(
@@ -22,9 +23,8 @@ export async function initializePostgresDatabase(
   const pool = createPostgresPool(env)
   try {
     await verifyPostgresConnection(pool)
-    const executed = await runMigrationsTransactionally(
-      createPostgresMigrationExecutor(pool),
-      migrationsDirectory,
+    const executed = await withPostgresMigrationLock(pool, async () =>
+      runMigrationsTransactionally(createPostgresMigrationExecutor(pool), migrationsDirectory),
     )
     assertMigrationPlan(planned, executed)
     return executed
