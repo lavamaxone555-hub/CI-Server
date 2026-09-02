@@ -29,9 +29,11 @@ describe.runIf(url)('PostgreSQL CI release evidence integration', () => {
         checks: ['live PostgreSQL reachable', 'live migration history readable'],
       })
 
-      expect(verifyPostgresCiReleaseEvidence(audit)).toEqual({
+      const evidence = verifyPostgresCiReleaseEvidence(audit)
+      expect(evidence).toEqual({
         verified: true,
         summary: 'postgres release evidence verified',
+        failures: [],
         audit,
       })
     } finally {

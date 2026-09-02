@@ -15,16 +15,25 @@ describe('PostgreSQL CI release evidence', () => {
     expect(verifyPostgresCiReleaseEvidence(audit)).toMatchObject({
       verified: true,
       summary: 'postgres release evidence verified',
+      failures: [],
     })
   })
 
-  it('fails CI verification when release approval is missing', () => {
+  it('reports the exact failed CI gates', () => {
     expect(verifyPostgresCiReleaseEvidence({
       ...audit,
+      evidenceReady: false,
       releaseApproved: false,
+      migrationsApplied: 0,
+      checks: [],
     })).toMatchObject({
       verified: false,
-      summary: 'postgres release evidence verification failed',
+      failures: [
+        'deployment evidence is incomplete',
+        'release approval is missing',
+        'migration baseline is missing',
+        'verification checks are missing',
+      ],
     })
   })
 })
