@@ -8,6 +8,7 @@ import { verifyPostgresRecoveryReadiness } from './postgresRecoveryReadiness'
 import { verifyPostgresPostRestore } from './postgresPostRestoreVerification'
 import { createPostgresDeploymentEvidence } from './postgresDeploymentEvidence'
 import { evaluatePostgresReleasePolicy } from './postgresReleasePolicy'
+import { createPostgresReleaseAuditRecord } from './postgresReleaseAuditTrail'
 
 export interface PostgresStartupResult {
   migrations: string[]
@@ -18,6 +19,7 @@ export interface PostgresStartupResult {
   postRestoreChecks: string[]
   releaseEvidenceReady: boolean
   releaseApproved: boolean
+  releaseAuditEvent: string
 }
 
 export async function startPostgresInfrastructure(
@@ -54,6 +56,14 @@ export async function startPostgresInfrastructure(
     })
     if (!policy.releasable) throw new Error(policy.reasons.join('; '))
 
+    const audit = createPostgresReleaseAuditRecord({
+      environment: config.environment,
+      evidenceReady: evidence.ready,
+      releaseApproved: policy.releasable,
+      migrationsApplied: verification.migrationsApplied,
+      checks: evidence.checks,
+    })
+
     return {
       migrations,
       readiness: verification.readiness,
@@ -63,6 +73,7 @@ export async function startPostgresInfrastructure(
       postRestoreChecks: postRestore.checks,
       releaseEvidenceReady: evidence.ready,
       releaseApproved: policy.releasable,
+      releaseAuditEvent: audit.event,
     }
   } finally {
     await pool.end()
