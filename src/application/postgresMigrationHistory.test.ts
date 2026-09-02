@@ -3,6 +3,7 @@ import {
   ensurePostgresMigrationHistory,
   readAppliedPostgresMigrations,
   recordAppliedPostgresMigration,
+  verifyPostgresMigrationHistory,
 } from './postgresMigrationHistory'
 
 describe('PostgreSQL migration history', () => {
@@ -22,5 +23,30 @@ describe('PostgreSQL migration history', () => {
     await recordAppliedPostgresMigration(pool, { name: '001.sql', checksum: 'abc' })
     await expect(readAppliedPostgresMigrations(pool)).resolves.toEqual([{ name: '001.sql', checksum: 'abc' }])
     expect(statements.some((statement) => statement.sql.includes('CREATE TABLE IF NOT EXISTS schema_migrations'))).toBe(true)
+  })
+
+  it('verifies migration history against expected checksums', async () => {
+    const pool = {
+      query: async () => ({ rows: [{ name: '001.sql', checksum: 'abc' }] }),
+      end: async () => {},
+    }
+    await expect(verifyPostgresMigrationHistory(pool, [{ name: '001.sql', checksum: 'abc' }])).resolves.toBeUndefined()
+  })
+
+  it('rejects unexpected applied migrations', async () => {
+    const pool = {
+      query: async () => ({ rows: [{ name: '999.sql', checksum: 'abc' }] }),
+      end: async () => {},
+    }
+    await expect(verifyPostgresMigrationHistory(pool, [])).rejects.toThrow('unexpected applied migration: 999.sql')
+  })
+
+  it('rejects checksum drift', async () => {
+    const pool = {
+      query: async () => ({ rows: [{ name: '001.sql', checksum: 'drift' }] }),
+      end: async () => {},
+    }
+    await expect(verifyPostgresMigrationHistory(pool, [{ name: '001.sql', checksum: 'abc' }]))
+      .rejects.toThrow('migration checksum mismatch: 001.sql')
   })
 })

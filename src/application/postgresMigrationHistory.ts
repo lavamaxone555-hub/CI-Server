@@ -29,3 +29,23 @@ export async function recordAppliedPostgresMigration(
     [migration.name, migration.checksum],
   )
 }
+
+export async function verifyPostgresMigrationHistory(
+  pool: PostgresPool,
+  expected: readonly AppliedMigration[],
+): Promise<void> {
+  const applied = await readAppliedPostgresMigrations(pool)
+  const expectedByName = new Map(expected.map((migration) => [migration.name, migration.checksum]))
+  for (const migration of applied) {
+    const expectedChecksum = expectedByName.get(migration.name)
+    if (expectedChecksum === undefined) {
+      throw new Error(`unexpected applied migration: ${migration.name}`)
+    }
+    if (expectedChecksum !== migration.checksum) {
+      throw new Error(`migration checksum mismatch: ${migration.name}`)
+    }
+  }
+  if (applied.length !== expected.length) {
+    throw new Error(`migration history count mismatch: expected ${expected.length}, received ${applied.length}`)
+  }
+}
