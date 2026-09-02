@@ -3,18 +3,27 @@ import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { PlannedMigration } from './migrationHistory'
 
-export interface MigrationExecutor {
-  execute(sql: string): Promise<void>
-}
-
+export interface MigrationExecutor { execute(sql: string): Promise<void> }
 export interface TransactionalMigrationExecutor extends MigrationExecutor {
   begin(): Promise<void>
   commit(): Promise<void>
   rollback(): Promise<void>
 }
 
+function assertSafeMigrationFileName(file: string): void {
+  if (!file || file.startsWith('/') || file.includes('\\') || file.split('/').includes('..')) {
+    throw new Error(`unsafe migration file name: ${file}`)
+  }
+}
+
 export async function listMigrations(directory: string): Promise<string[]> {
-  return (await readdir(directory)).filter((file) => file.endsWith('.sql')).sort()
+  return (await readdir(directory))
+    .filter((file) => file.endsWith('.sql'))
+    .filter((file) => {
+      assertSafeMigrationFileName(file)
+      return true
+    })
+    .sort()
 }
 
 export async function loadMigrationSources(directory: string): Promise<PlannedMigration[]> {
@@ -46,7 +55,12 @@ export async function runMigrationsTransactionally(
     await executor.commit()
     return files
   } catch (error) {
-    await executor.rollback()
+    try {
+      await executor.rollback()
+    } catch (rollbackError) {
+      const message = rollbackError instanceof Error ? rollbackError.message : 'unknown rollback failure'
+      throw new Error(`migration failed and rollback failed: ${message}`, { cause: error })
+    }
     throw error
   }
 }

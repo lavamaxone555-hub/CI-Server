@@ -20,10 +20,8 @@ describe('migration runner', () => {
     await writeFile(join(directory, '001_first.sql'), 'FIRST')
     const calls: string[] = []
     const files = await runMigrationsTransactionally({
-      begin: async () => { calls.push('BEGIN') },
-      execute: async (sql) => { calls.push(sql) },
-      commit: async () => { calls.push('COMMIT') },
-      rollback: async () => { calls.push('ROLLBACK') },
+      begin: async () => { calls.push('BEGIN') }, execute: async (sql) => { calls.push(sql) },
+      commit: async () => { calls.push('COMMIT') }, rollback: async () => { calls.push('ROLLBACK') },
     }, directory)
     expect(files).toEqual(['001_first.sql'])
     expect(calls).toEqual(['BEGIN', 'FIRST', 'COMMIT'])
@@ -34,11 +32,18 @@ describe('migration runner', () => {
     await writeFile(join(directory, '001_first.sql'), 'FIRST')
     const calls: string[] = []
     await expect(runMigrationsTransactionally({
-      begin: async () => { calls.push('BEGIN') },
-      execute: async () => { throw new Error('migration failed') },
-      commit: async () => { calls.push('COMMIT') },
-      rollback: async () => { calls.push('ROLLBACK') },
+      begin: async () => { calls.push('BEGIN') }, execute: async () => { throw new Error('migration failed') },
+      commit: async () => { calls.push('COMMIT') }, rollback: async () => { calls.push('ROLLBACK') },
     }, directory)).rejects.toThrow('migration failed')
     expect(calls).toEqual(['BEGIN', 'ROLLBACK'])
+  })
+
+  it('reports rollback failure without hiding the failed migration context', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'retail-migrations-'))
+    await writeFile(join(directory, '001_first.sql'), 'FIRST')
+    await expect(runMigrationsTransactionally({
+      begin: async () => {}, execute: async () => { throw new Error('migration failed') },
+      commit: async () => {}, rollback: async () => { throw new Error('rollback unavailable') },
+    }, directory)).rejects.toThrow('migration failed and rollback failed: rollback unavailable')
   })
 })
