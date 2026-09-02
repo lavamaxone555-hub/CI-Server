@@ -8,36 +8,29 @@ Phase 5 — Production Database Infrastructure
 ## Completed
 ### Phase 4 — Production Architecture & Real Workflows
 - COMPLETE
-- Application / repository boundary
-- Transactional persistence and inventory audit boundary
-- UI resilience and application integration
-- Transactional execution boundary
-- Local quality gates passed
 
 ### Phase 5 — PostgreSQL Infrastructure
-- PostgreSQL database configuration: COMPLETE
-- PostgreSQL SSL / production deployment validation: COMPLETE
-- PostgreSQL pool and connection probe boundary: COMPLETE
-- Migration runner: COMPLETE
-- Migration safety checks: COMPLETE
-- PostgreSQL health check: COMPLETE
-- PostgreSQL readiness check: COMPLETE
-- PostgreSQL startup validation: COMPLETE
-- Latest verified quality gate: 50/50 tests PASS, typecheck PASS, production build PASS, lint 0 warnings / 0 errors
-- Latest Phase 5 commit: 559f55f
+- PostgreSQL configuration / SSL / pool / connection probe: COMPLETE
+- Migration runner, safety checks, locking and rollback: COMPLETE
+- Health / readiness / startup validation: COMPLETE
+- Deployment preflight and deployment verification: COMPLETE
+- Recovery readiness and post-restore consistency: COMPLETE
+- Release evidence, release policy and audit trail: COMPLETE
+- CI-side release evidence verification: COMPLETE
+- Live PostgreSQL CI evidence integration: IN PROGRESS
 
 ## CI Server
 - Git remote: CONNECTED
 - Branch push: SUCCESS
 - GitHub Actions server-side CI: ACTIVE
-- Local quality gate is required before commit
+- PostgreSQL service configured in CI
+- Server-side result must be verified after push
 
 ## Current Priority
-1. Run integration/E2E tests against a real PostgreSQL instance.
-2. Execute migrations against the live database.
-3. Add PostgreSQL-backed CI coverage when runner support is available.
+1. Verify live PostgreSQL migration baseline inside CI.
+2. Verify CI release evidence against the live database.
+3. Push and confirm server-side GitHub Actions result.
 4. Keep every commit behind the full local quality gate.
-5. Push completed work and verify server-side CI.
 
 ## Rule
 Inspect -> Implement -> Test -> Typecheck -> Build -> Lint -> Commit -> Push -> Server CI -> Update Status.
