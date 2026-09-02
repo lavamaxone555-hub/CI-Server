@@ -20,4 +20,9 @@ describe('PostgreSQL integration boundary', () => {
     expect(statements[0]).toContain('CREATE TABLE')
     expect(statements[1]).toContain('CREATE INDEX')
   })
+
+  it('propagates a real client failure instead of hiding it', async () => {
+    const executor = createPostgresMigrationExecutor({ query: async () => { throw new Error('connection refused') } })
+    await expect(executor.execute('SELECT 1')).rejects.toThrow('connection refused')
+  })
 })
