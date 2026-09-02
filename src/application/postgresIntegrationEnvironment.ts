@@ -1,9 +1,17 @@
-export function shouldRunPostgresIntegration(env: Record<string, string | undefined> = process.env): boolean {
-  return Boolean(env.DATABASE_URL)
+export function hasPostgresIntegrationEnvironment(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return typeof env.POSTGRES_INTEGRATION_URL === 'string' && env.POSTGRES_INTEGRATION_URL.length > 0
 }
 
-export function requirePostgresIntegrationUrl(env: Record<string, string | undefined> = process.env): string {
-  const url = env.DATABASE_URL
-  if (!url) throw new Error('DATABASE_URL is required for PostgreSQL integration tests')
-  return url
+export function loadPostgresIntegrationEnvironment(
+  env: Record<string, string | undefined> = process.env,
+): Record<string, string | undefined> {
+  const connectionString = env.POSTGRES_INTEGRATION_URL
+  if (!connectionString) throw new Error('POSTGRES_INTEGRATION_URL is required for live integration tests')
+  return {
+    DATABASE_URL: connectionString,
+    DATABASE_SSL: env.POSTGRES_INTEGRATION_SSL ?? 'false',
+    NODE_ENV: 'test',
+  }
 }
