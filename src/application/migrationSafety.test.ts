@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { assertMigrationPlan, assertMigrationsAvailable } from './migrationSafety'
+import {
+  assertMigrationNamesAreOrdered,
+  assertMigrationPlan,
+  assertMigrationsAreUnique,
+  assertMigrationsAvailable,
+} from './migrationSafety'
 
 describe('migration safety', () => {
   it('accepts an exact migration execution plan', () => {
@@ -13,5 +18,15 @@ describe('migration safety', () => {
 
   it('requires at least one SQL migration', () => {
     expect(() => assertMigrationsAvailable([])).toThrow('no SQL migrations found')
+  })
+
+  it('requires unique migration names', () => {
+    expect(() => assertMigrationsAreUnique(['001.sql', '001.sql']))
+      .toThrow('duplicate migration names found')
+  })
+
+  it('requires migration names to be ordered', () => {
+    expect(() => assertMigrationNamesAreOrdered(['002.sql', '001.sql']))
+      .toThrow('migration files are not ordered')
   })
 })

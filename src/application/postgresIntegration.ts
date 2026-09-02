@@ -1,7 +1,12 @@
 import { join } from 'node:path'
 import { loadDatabaseConfig } from './databaseConfig'
 import { listMigrations, runMigrations } from './migrationRunner'
-import { assertMigrationPlan, assertMigrationsAvailable } from './migrationSafety'
+import {
+  assertMigrationNamesAreOrdered,
+  assertMigrationPlan,
+  assertMigrationsAreUnique,
+  assertMigrationsAvailable,
+} from './migrationSafety'
 import { createPostgresMigrationExecutor } from './postgresMigrationExecutor'
 import { createPostgresPool, verifyPostgresConnection, type PostgresPool } from './postgresDatabase'
 
@@ -12,6 +17,8 @@ export async function initializePostgresDatabase(
   loadDatabaseConfig(env)
   const planned = await listMigrations(migrationsDirectory)
   assertMigrationsAvailable(planned)
+  assertMigrationsAreUnique(planned)
+  assertMigrationNamesAreOrdered(planned)
   const pool = createPostgresPool(env)
   try {
     await verifyPostgresConnection(pool)
