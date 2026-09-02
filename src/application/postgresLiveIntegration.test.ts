@@ -4,6 +4,7 @@ import { hasPostgresIntegrationEnvironment, loadPostgresIntegrationEnvironment }
 import { initializePostgresDatabase } from './postgresIntegration'
 import { checkPostgresHealth } from './postgresHealthCheck'
 import { checkPostgresReadiness } from './postgresReadiness'
+import { readAppliedPostgresMigrations } from './postgresMigrationHistory'
 import { createPostgresPool, verifyPostgresConnection } from './postgresDatabase'
 
 const enabled = hasPostgresIntegrationEnvironment()
@@ -34,12 +35,20 @@ describe.skipIf(!enabled)('live PostgreSQL integration', () => {
     expect(migrations.length).toBeGreaterThan(0)
   })
 
-  it('can run the migration set repeatedly without corrupting the live PostgreSQL database', async () => {
+  it('records applied migrations and returns no pending migrations on a second run', async () => {
     const env = loadPostgresIntegrationEnvironment()
     const migrationsDirectory = join(process.cwd(), 'database', 'migrations')
-    const first = await initializePostgresDatabase(env, migrationsDirectory)
+    await initializePostgresDatabase(env, migrationsDirectory)
     const second = await initializePostgresDatabase(env, migrationsDirectory)
-    expect(second).toEqual(first)
+    expect(second).toEqual([])
+    const pool = createPostgresPool(env)
+    try {
+      const applied = await readAppliedPostgresMigrations(pool)
+      expect(applied.length).toBeGreaterThan(0)
+      expect(applied.every((migration) => migration.checksum.length === 64)).toBe(true)
+    } finally {
+      await pool.end()
+    }
   })
 
   it('verifies the migrated retail schema on the live PostgreSQL database', async () => {
@@ -66,7 +75,6 @@ describe.skipIf(!enabled)('live PostgreSQL integration', () => {
       const health = await checkPostgresHealth(pool)
       expect(health.status).toBe('ok')
       expect(health.latencyMs).toBeGreaterThanOrEqual(0)
-
       const readiness = await checkPostgresReadiness(pool)
       expect(readiness.ready).toBe(true)
       expect(readiness.latencyMs).toBeGreaterThanOrEqual(0)
