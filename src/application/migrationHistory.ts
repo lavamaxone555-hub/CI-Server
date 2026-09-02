@@ -3,10 +3,14 @@ export interface AppliedMigration {
   checksum: string
 }
 
+export interface PlannedMigration extends AppliedMigration {
+  sql: string
+}
+
 export function pendingMigrations(
-  planned: readonly AppliedMigration[],
+  planned: readonly PlannedMigration[],
   applied: readonly AppliedMigration[],
-): AppliedMigration[] {
+): PlannedMigration[] {
   const appliedByName = new Map(applied.map((migration) => [migration.name, migration.checksum]))
   for (const migration of planned) {
     const checksum = appliedByName.get(migration.name)

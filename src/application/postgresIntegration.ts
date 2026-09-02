@@ -1,14 +1,19 @@
 import { join } from 'node:path'
 import { loadDatabaseConfig } from './databaseConfig'
-import { listMigrations, runMigrationsTransactionally } from './migrationRunner'
+import { loadMigrationSources } from './migrationRunner'
+import { pendingMigrations } from './migrationHistory'
 import {
   assertMigrationNamesAreOrdered,
-  assertMigrationPlan,
   assertMigrationsAreUnique,
   assertMigrationsAvailable,
 } from './migrationSafety'
 import { createPostgresMigrationExecutor } from './postgresMigrationExecutor'
 import { withPostgresMigrationLock } from './postgresMigrationLock'
+import {
+  ensurePostgresMigrationHistory,
+  readAppliedPostgresMigrations,
+  recordAppliedPostgresMigration,
+} from './postgresMigrationHistory'
 import { createPostgresPool, verifyPostgresConnection, type PostgresPool } from './postgresDatabase'
 
 export async function initializePostgresDatabase(
@@ -16,18 +21,32 @@ export async function initializePostgresDatabase(
   migrationsDirectory = join(process.cwd(), 'database', 'migrations'),
 ): Promise<string[]> {
   loadDatabaseConfig(env)
-  const planned = await listMigrations(migrationsDirectory)
-  assertMigrationsAvailable(planned)
-  assertMigrationsAreUnique(planned)
-  assertMigrationNamesAreOrdered(planned)
+  const planned = await loadMigrationSources(migrationsDirectory)
+  const names = planned.map((migration) => migration.name)
+  assertMigrationsAvailable(names)
+  assertMigrationsAreUnique(names)
+  assertMigrationNamesAreOrdered(names)
   const pool = createPostgresPool(env)
   try {
     await verifyPostgresConnection(pool)
-    const executed = await withPostgresMigrationLock(pool, async () =>
-      runMigrationsTransactionally(createPostgresMigrationExecutor(pool), migrationsDirectory),
-    )
-    assertMigrationPlan(planned, executed)
-    return executed
+    return await withPostgresMigrationLock(pool, async () => {
+      await ensurePostgresMigrationHistory(pool)
+      const pending = pendingMigrations(planned, await readAppliedPostgresMigrations(pool))
+      if (pending.length === 0) return []
+      const executor = createPostgresMigrationExecutor(pool)
+      await executor.begin()
+      try {
+        for (const migration of pending) {
+          await executor.execute(migration.sql)
+          await recordAppliedPostgresMigration(pool, migration)
+        }
+        await executor.commit()
+        return pending.map((migration) => migration.name)
+      } catch (error) {
+        await executor.rollback()
+        throw error
+      }
+    })
   } finally {
     await pool.end()
   }
