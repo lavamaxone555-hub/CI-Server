@@ -1,11 +1,13 @@
 import { initializePostgresDatabase } from './postgresIntegration'
-import { checkPostgresReadiness, type PostgresReadiness } from './postgresReadiness'
+import type { PostgresReadiness } from './postgresReadiness'
 import { createPostgresPool } from './postgresDatabase'
 import { loadPostgresDeploymentConfig } from './postgresDeploymentConfig'
+import { verifyPostgresDeployment } from './postgresDeploymentVerification'
 
 export interface PostgresStartupResult {
   migrations: string[]
   readiness: PostgresReadiness
+  migrationsApplied: number
 }
 
 export async function startPostgresInfrastructure(
@@ -15,9 +17,15 @@ export async function startPostgresInfrastructure(
   const migrations = config.migrationOnStartup ? await initializePostgresDatabase(env) : []
   const pool = createPostgresPool(env)
   try {
-    const readiness = await checkPostgresReadiness(pool)
-    if (!readiness.ready) throw new Error(readiness.reason ?? 'database unavailable')
-    return { migrations, readiness }
+    const verification = await verifyPostgresDeployment(pool)
+    if (!verification.ready) {
+      throw new Error(verification.readiness.reason ?? 'database deployment verification failed')
+    }
+    return {
+      migrations,
+      readiness: verification.readiness,
+      migrationsApplied: verification.migrationsApplied,
+    }
   } finally {
     await pool.end()
   }
