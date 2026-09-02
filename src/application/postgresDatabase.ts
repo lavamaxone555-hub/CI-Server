@@ -13,3 +13,7 @@ export function createPostgresPool(env: Record<string, string | undefined> = pro
     ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
   })
 }
+
+export async function verifyPostgresConnection(pool: PostgresPool): Promise<void> {
+  await pool.query('SELECT 1')
+}
