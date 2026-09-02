@@ -37,10 +37,13 @@ jobs:
         run: npm run verify
       - name: Lint
         run: npm run lint
-      - name: Run live PostgreSQL integration test
+      - name: Run live PostgreSQL integration suite
         run: npm run test
         env:
           POSTGRES_INTEGRATION_URL: postgresql://postgres:postgres@localhost:5432/retail_test
           POSTGRES_INTEGRATION_SSL: "false"
       - name: CI release evidence verification
-        run: npm run test -- src/application/postgresCiReleaseEvidence.test.ts
+        run: npm run test -- src/application/postgresCiReleaseEvidence.integration.test.ts
+        env:
+          POSTGRES_INTEGRATION_URL: postgresql://postgres:postgres@localhost:5432/retail_test
+          POSTGRES_INTEGRATION_SSL: "false"

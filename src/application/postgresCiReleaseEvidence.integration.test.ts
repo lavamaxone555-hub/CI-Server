@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createPostgresPool } from './postgresDatabase'
 import { initializePostgresDatabase } from './postgresIntegration'
 import { readAppliedPostgresMigrations } from './postgresMigrationHistory'
@@ -14,19 +14,13 @@ describe.runIf(url)('PostgreSQL CI release evidence integration', () => {
     NODE_ENV: 'test',
   }
 
-  beforeAll(async () => {
-    await initializePostgresDatabase(env)
-  })
-
-  afterAll(async () => {
-    const pool = createPostgresPool(env)
-    await pool.end()
-  })
-
   it('verifies evidence against the live migration baseline', async () => {
+    await initializePostgresDatabase(env)
     const pool = createPostgresPool(env)
     try {
       const migrations = await readAppliedPostgresMigrations(pool)
+      expect(migrations.length).toBeGreaterThan(0)
+
       const audit = createPostgresReleaseAuditRecord({
         environment: 'production',
         evidenceReady: true,
@@ -34,8 +28,11 @@ describe.runIf(url)('PostgreSQL CI release evidence integration', () => {
         migrationsApplied: migrations.length,
         checks: ['live PostgreSQL reachable', 'live migration history readable'],
       })
-      expect(verifyPostgresCiReleaseEvidence(audit)).toMatchObject({
-        verified: migrations.length > 0,
+
+      expect(verifyPostgresCiReleaseEvidence(audit)).toEqual({
+        verified: true,
+        summary: 'postgres release evidence verified',
+        audit,
       })
     } finally {
       await pool.end()
