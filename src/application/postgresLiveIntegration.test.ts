@@ -8,7 +8,7 @@ import { checkPostgresHealth } from './postgresHealthCheck'
 import { checkPostgresReadiness } from './postgresReadiness'
 import { readAppliedPostgresMigrations } from './postgresMigrationHistory'
 import { writeMigrationSet } from './postgresMigrationFailureRecovery'
-import { checksumMigration } from './migrationRunner'
+import { checksumMigration, loadMigrationSources } from './migrationRunner'
 import { createPostgresPool, verifyPostgresConnection } from './postgresDatabase'
 
 const enabled = hasPostgresIntegrationEnvironment()
@@ -23,10 +23,19 @@ describe.skipIf(!enabled)('live PostgreSQL integration', () => {
     try { await verifyPostgresConnection(pool); expect(true).toBe(true) } finally { await pool.end() }
   })
 
-  it('executes the migration set transactionally against the live PostgreSQL database', async () => {
+  it('executes or verifies the migration set transactionally against the live PostgreSQL database', async () => {
     const env = loadPostgresIntegrationEnvironment()
-    const migrations = await initializePostgresDatabase(env, join(process.cwd(), 'database', 'migrations'))
-    expect(migrations.length).toBeGreaterThan(0)
+    const directory = join(process.cwd(), 'database', 'migrations')
+    const planned = await loadMigrationSources(directory)
+    expect(planned.length).toBeGreaterThan(0)
+
+    const migrations = await initializePostgresDatabase(env, directory)
+    const pool = createPostgresPool(env)
+    try {
+      const applied = await readAppliedPostgresMigrations(pool)
+      expect(applied.length).toBe(planned.length)
+      expect(migrations.length).toBeGreaterThanOrEqual(0)
+    } finally { await pool.end() }
   })
 
   it('rolls back live PostgreSQL migrations and history when a pending migration fails', async () => {
