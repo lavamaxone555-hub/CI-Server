@@ -5,6 +5,7 @@ import { loadPostgresDeploymentConfig } from './postgresDeploymentConfig'
 import { verifyPostgresDeployment } from './postgresDeploymentVerification'
 import { verifyPostgresDeploymentPreflight } from './postgresDeploymentPreflight'
 import { verifyPostgresRecoveryReadiness } from './postgresRecoveryReadiness'
+import { verifyPostgresPostRestore } from './postgresPostRestoreVerification'
 
 export interface PostgresStartupResult {
   migrations: string[]
@@ -12,6 +13,7 @@ export interface PostgresStartupResult {
   migrationsApplied: number
   preflightChecks: string[]
   recoveryChecks: string[]
+  postRestoreChecks: string[]
 }
 
 export async function startPostgresInfrastructure(
@@ -25,19 +27,21 @@ export async function startPostgresInfrastructure(
   const pool = createPostgresPool(env)
   try {
     const verification = await verifyPostgresDeployment(pool)
-    if (!verification.ready) {
-      throw new Error(verification.readiness.reason ?? 'database deployment verification failed')
-    }
+    if (!verification.ready) throw new Error(verification.readiness.reason ?? 'database deployment verification failed')
+
     const recovery = await verifyPostgresRecoveryReadiness(pool)
-    if (!recovery.ready) {
-      throw new Error(recovery.readiness.reason ?? 'database recovery verification failed')
-    }
+    if (!recovery.ready) throw new Error(recovery.readiness.reason ?? 'database recovery verification failed')
+
+    const postRestore = await verifyPostgresPostRestore(pool, verification.migrationsApplied)
+    if (!postRestore.ready) throw new Error(postRestore.readiness.reason ?? 'database post-restore verification failed')
+
     return {
       migrations,
       readiness: verification.readiness,
       migrationsApplied: verification.migrationsApplied,
       preflightChecks: preflight.checks,
       recoveryChecks: recovery.checks,
+      postRestoreChecks: postRestore.checks,
     }
   } finally {
     await pool.end()
