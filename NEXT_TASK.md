@@ -1,18 +1,21 @@
 # Next Autonomous Task
 
-## Phase 4 — Production Hardening
+## Phase 5 — Production Database Infrastructure
 
-1. Introduce a persistence adapter boundary suitable for replacing in-memory storage.
-2. Add integration tests around inventory refresh and failure/retry behavior.
-3. Keep npm run verify green before every commit.
-4. Commit only completed, tested units.
+Current work:
+1. Provision a real PostgreSQL instance for integration/E2E testing.
+2. Execute the production migration set against the real database.
+3. Verify startup, health, readiness, failure propagation, and cleanup against a live PostgreSQL connection.
+4. Add CI support for PostgreSQL-backed integration tests when the runner/service is available.
+5. Run npm run verify and lint before every commit.
+6. Push completed work and verify remote CI.
 
-## CI Activation
-When an authorized Git remote is available:
-1. Add origin.
-2. Push main and feature branches.
-3. Verify the first GitHub Actions run.
-4. Record the actual server-side result.
+## Completed Phase 5 Work
+- PostgreSQL configuration and SSL validation
+- PostgreSQL pool boundary and connection probe
+- Migration runner and migration safety checks
+- Health and readiness checks
+- Startup validation and production deployment configuration
 
-## Completion Rule
-Never mark server-side CI active without a real successful remote run.
+## Rule
+Inspect -> Implement -> Test -> Typecheck -> Build -> Lint -> Commit -> Push -> Server CI -> Update Status.
