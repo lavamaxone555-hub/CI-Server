@@ -3,16 +3,21 @@ import type { PostgresReadiness } from './postgresReadiness'
 import { createPostgresPool } from './postgresDatabase'
 import { loadPostgresDeploymentConfig } from './postgresDeploymentConfig'
 import { verifyPostgresDeployment } from './postgresDeploymentVerification'
+import { verifyPostgresDeploymentPreflight } from './postgresDeploymentPreflight'
 
 export interface PostgresStartupResult {
   migrations: string[]
   readiness: PostgresReadiness
   migrationsApplied: number
+  preflightChecks: string[]
 }
 
 export async function startPostgresInfrastructure(
   env: Record<string, string | undefined> = process.env,
 ): Promise<PostgresStartupResult> {
+  const preflight = verifyPostgresDeploymentPreflight(env)
+  if (!preflight.ready) throw new Error('database deployment preflight failed')
+
   const config = loadPostgresDeploymentConfig(env)
   const migrations = config.migrationOnStartup ? await initializePostgresDatabase(env) : []
   const pool = createPostgresPool(env)
@@ -25,6 +30,7 @@ export async function startPostgresInfrastructure(
       migrations,
       readiness: verification.readiness,
       migrationsApplied: verification.migrationsApplied,
+      preflightChecks: preflight.checks,
     }
   } finally {
     await pool.end()
