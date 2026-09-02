@@ -11,6 +11,20 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: retail_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
 
     steps:
       - uses: actions/checkout@v4
@@ -19,6 +33,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run test
-      - run: npm run typecheck
-      - run: npm run build
+      - run: npm run verify
+      - run: npm run lint
+      - name: Run live PostgreSQL integration test
+        run: npm run test
+        env:
+          POSTGRES_INTEGRATION_URL: postgresql://postgres:postgres@localhost:5432/retail_test
+          POSTGRES_INTEGRATION_SSL: "false"
