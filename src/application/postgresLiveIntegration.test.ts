@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { join } from 'node:path'
 import { hasPostgresIntegrationEnvironment, loadPostgresIntegrationEnvironment } from './postgresIntegrationEnvironment'
 import { initializePostgresDatabase } from './postgresIntegration'
+import { checkPostgresHealth } from './postgresHealthCheck'
 import { checkPostgresReadiness } from './postgresReadiness'
 import { createPostgresPool, verifyPostgresConnection } from './postgresDatabase'
 
@@ -50,10 +51,14 @@ describe.skipIf(!enabled)('live PostgreSQL integration', () => {
     }
   })
 
-  it('reports ready after migrations on the live PostgreSQL database', async () => {
+  it('reports healthy and ready after migrations on the live PostgreSQL database', async () => {
     const env = loadPostgresIntegrationEnvironment()
     const pool = createPostgresPool(env)
     try {
+      const health = await checkPostgresHealth(pool)
+      expect(health.status).toBe('ok')
+      expect(health.latencyMs).toBeGreaterThanOrEqual(0)
+
       const readiness = await checkPostgresReadiness(pool)
       expect(readiness.ready).toBe(true)
       expect(readiness.latencyMs).toBeGreaterThanOrEqual(0)
