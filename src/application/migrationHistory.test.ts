@@ -18,4 +18,11 @@ describe('migration history', () => {
       [{ name: '001.sql', checksum: 'old' }],
     )).toThrow('migration checksum mismatch: 001.sql')
   })
+
+  it('rejects unsafe migration names before planning execution', () => {
+    expect(() => pendingMigrations(
+      [{ name: '../escape.sql', checksum: 'a', sql: 'SELECT 1' }],
+      [],
+    )).toThrow('unsafe migration name: ../escape.sql')
+  })
 })
