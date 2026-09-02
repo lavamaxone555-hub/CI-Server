@@ -28,10 +28,18 @@ describe.skipIf(!enabled)('live PostgreSQL integration', () => {
     }
   })
 
-  it('executes the migration set against the live PostgreSQL database', async () => {
+  it('executes the migration set transactionally against the live PostgreSQL database', async () => {
     const env = loadPostgresIntegrationEnvironment()
     const migrations = await initializePostgresDatabase(env, join(process.cwd(), 'database', 'migrations'))
     expect(migrations.length).toBeGreaterThan(0)
+  })
+
+  it('can run the migration set repeatedly without corrupting the live PostgreSQL database', async () => {
+    const env = loadPostgresIntegrationEnvironment()
+    const migrationsDirectory = join(process.cwd(), 'database', 'migrations')
+    const first = await initializePostgresDatabase(env, migrationsDirectory)
+    const second = await initializePostgresDatabase(env, migrationsDirectory)
+    expect(second).toEqual(first)
   })
 
   it('verifies the migrated retail schema on the live PostgreSQL database', async () => {
