@@ -1,6 +1,7 @@
 import { initializePostgresDatabase } from './postgresIntegration'
 import { checkPostgresReadiness, type PostgresReadiness } from './postgresReadiness'
 import { createPostgresPool } from './postgresDatabase'
+import { loadPostgresDeploymentConfig } from './postgresDeploymentConfig'
 
 export interface PostgresStartupResult {
   migrations: string[]
@@ -10,6 +11,7 @@ export interface PostgresStartupResult {
 export async function startPostgresInfrastructure(
   env: Record<string, string | undefined> = process.env,
 ): Promise<PostgresStartupResult> {
+  loadPostgresDeploymentConfig(env)
   const migrations = await initializePostgresDatabase(env)
   const pool = createPostgresPool(env)
   try {
