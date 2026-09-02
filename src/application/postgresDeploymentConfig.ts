@@ -2,6 +2,7 @@ import { loadDatabaseConfig, type DatabaseConfig } from './databaseConfig'
 
 export interface PostgresDeploymentConfig extends DatabaseConfig {
   environment: 'development' | 'test' | 'production'
+  migrationOnStartup: boolean
 }
 
 export function loadPostgresDeploymentConfig(
@@ -15,5 +16,9 @@ export function loadPostgresDeploymentConfig(
   if (environment === 'production' && !database.ssl) {
     throw new Error('DATABASE_SSL=true is required in production')
   }
-  return { ...database, environment }
+  const migrationOnStartup = env.DATABASE_MIGRATE_ON_STARTUP !== 'false'
+  if (environment === 'production' && migrationOnStartup && env.DATABASE_MIGRATION_APPROVED !== 'true') {
+    throw new Error('DATABASE_MIGRATION_APPROVED=true is required for production startup migrations')
+  }
+  return { ...database, environment, migrationOnStartup }
 }

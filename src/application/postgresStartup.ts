@@ -11,8 +11,8 @@ export interface PostgresStartupResult {
 export async function startPostgresInfrastructure(
   env: Record<string, string | undefined> = process.env,
 ): Promise<PostgresStartupResult> {
-  loadPostgresDeploymentConfig(env)
-  const migrations = await initializePostgresDatabase(env)
+  const config = loadPostgresDeploymentConfig(env)
+  const migrations = config.migrationOnStartup ? await initializePostgresDatabase(env) : []
   const pool = createPostgresPool(env)
   try {
     const readiness = await checkPostgresReadiness(pool)
