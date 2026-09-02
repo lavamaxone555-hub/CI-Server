@@ -33,10 +33,14 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run verify
-      - run: npm run lint
+      - name: Quality verification
+        run: npm run verify
+      - name: Lint
+        run: npm run lint
       - name: Run live PostgreSQL integration test
         run: npm run test
         env:
           POSTGRES_INTEGRATION_URL: postgresql://postgres:postgres@localhost:5432/retail_test
           POSTGRES_INTEGRATION_SSL: "false"
+      - name: CI release evidence verification
+        run: npm run test -- src/application/postgresCiReleaseEvidence.test.ts
