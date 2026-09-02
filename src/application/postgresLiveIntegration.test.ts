@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { join } from 'node:path'
 import { hasPostgresIntegrationEnvironment, loadPostgresIntegrationEnvironment } from './postgresIntegrationEnvironment'
 import { initializePostgresDatabase } from './postgresIntegration'
+import { checkPostgresReadiness } from './postgresReadiness'
 import { createPostgresPool, verifyPostgresConnection } from './postgresDatabase'
 
 const enabled = hasPostgresIntegrationEnvironment()
@@ -44,6 +45,18 @@ describe.skipIf(!enabled)('live PostgreSQL integration', () => {
       ) as QueryResult
       expect(result.rows.map((row) => row.table_name))
         .toEqual(['imei_units', 'inventory_movements', 'payments', 'sales'])
+    } finally {
+      await pool.end()
+    }
+  })
+
+  it('reports ready after migrations on the live PostgreSQL database', async () => {
+    const env = loadPostgresIntegrationEnvironment()
+    const pool = createPostgresPool(env)
+    try {
+      const readiness = await checkPostgresReadiness(pool)
+      expect(readiness.ready).toBe(true)
+      expect(readiness.latencyMs).toBeGreaterThanOrEqual(0)
     } finally {
       await pool.end()
     }
