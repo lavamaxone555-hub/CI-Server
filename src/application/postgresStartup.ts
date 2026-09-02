@@ -6,6 +6,7 @@ import { verifyPostgresDeployment } from './postgresDeploymentVerification'
 import { verifyPostgresDeploymentPreflight } from './postgresDeploymentPreflight'
 import { verifyPostgresRecoveryReadiness } from './postgresRecoveryReadiness'
 import { verifyPostgresPostRestore } from './postgresPostRestoreVerification'
+import { createPostgresDeploymentEvidence } from './postgresDeploymentEvidence'
 
 export interface PostgresStartupResult {
   migrations: string[]
@@ -14,6 +15,7 @@ export interface PostgresStartupResult {
   preflightChecks: string[]
   recoveryChecks: string[]
   postRestoreChecks: string[]
+  releaseEvidenceReady: boolean
 }
 
 export async function startPostgresInfrastructure(
@@ -35,6 +37,14 @@ export async function startPostgresInfrastructure(
     const postRestore = await verifyPostgresPostRestore(pool, verification.migrationsApplied)
     if (!postRestore.ready) throw new Error(postRestore.readiness.reason ?? 'database post-restore verification failed')
 
+    const evidence = createPostgresDeploymentEvidence({
+      migrationsApplied: verification.migrationsApplied,
+      preflightChecks: preflight.checks,
+      recoveryChecks: recovery.checks,
+      postRestoreChecks: postRestore.checks,
+    })
+    if (!evidence.ready) throw new Error('database release evidence is incomplete')
+
     return {
       migrations,
       readiness: verification.readiness,
@@ -42,6 +52,7 @@ export async function startPostgresInfrastructure(
       preflightChecks: preflight.checks,
       recoveryChecks: recovery.checks,
       postRestoreChecks: postRestore.checks,
+      releaseEvidenceReady: evidence.ready,
     }
   } finally {
     await pool.end()
