@@ -7,6 +7,7 @@ export interface PostgresReleaseAuditInput {
   releaseId?: string
   createdAt?: string
   expectedMigrationBaseline?: number
+  releaseCommitSha?: string
 }
 
 export interface PostgresReleaseAuditRecord {
@@ -18,6 +19,7 @@ export interface PostgresReleaseAuditRecord {
   releaseApproved: boolean
   migrationsApplied: number
   expectedMigrationBaseline?: number
+  releaseCommitSha?: string
   checks: string[]
 }
 
@@ -31,6 +33,7 @@ export function createPostgresReleaseAuditRecord(input: PostgresReleaseAuditInpu
     releaseApproved: input.releaseApproved,
     migrationsApplied: input.migrationsApplied,
     ...(input.expectedMigrationBaseline === undefined ? {} : { expectedMigrationBaseline: input.expectedMigrationBaseline }),
+    ...(input.releaseCommitSha === undefined ? {} : { releaseCommitSha: input.releaseCommitSha }),
     checks: [...input.checks],
   }
 }

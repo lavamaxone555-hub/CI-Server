@@ -7,6 +7,10 @@ export interface PostgresCiReleaseEvidence {
   audit: PostgresReleaseAuditRecord
 }
 
+function isCommitSha(value: string | undefined): boolean {
+  return !!value && /^[0-9a-f]{7,64}$/i.test(value)
+}
+
 export function verifyPostgresCiReleaseEvidence(
   audit: PostgresReleaseAuditRecord,
   expectedMigrationBaseline?: number,
@@ -20,6 +24,9 @@ export function verifyPostgresCiReleaseEvidence(
   }
   if (!audit.releaseId?.trim()) failures.push('release identity is missing')
   if (!audit.createdAt || Number.isNaN(Date.parse(audit.createdAt))) failures.push('release timestamp is invalid')
+  if (audit.environment === 'production' && !isCommitSha(audit.releaseCommitSha)) {
+    failures.push('release commit identity is invalid')
+  }
   if (!audit.evidenceReady) failures.push('deployment evidence is incomplete')
   if (!audit.releaseApproved) failures.push('release approval is missing')
   if (audit.migrationsApplied < baseline) failures.push('migration baseline is below the expected level')

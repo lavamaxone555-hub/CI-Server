@@ -11,6 +11,7 @@ describe('PostgreSQL CI release evidence', () => {
     releaseApproved: true,
     migrationsApplied: 3,
     expectedMigrationBaseline: 3,
+    releaseCommitSha: '84a95cf',
     checks: ['preflight passed'],
   }
 
@@ -18,8 +19,10 @@ describe('PostgreSQL CI release evidence', () => {
     expect(verifyPostgresCiReleaseEvidence(audit)).toMatchObject({ verified: true, failures: [] })
   })
 
-  it('preserves legacy evidence with the default baseline', () => {
-    const { expectedMigrationBaseline: _baseline, ...legacyAudit } = audit
+  it('preserves legacy non-production evidence with the default baseline', () => {
+    const { expectedMigrationBaseline: _baseline, releaseCommitSha: _sha, ...legacyAudit } = {
+      ...audit, environment: 'test' as const,
+    }
     expect(verifyPostgresCiReleaseEvidence(legacyAudit)).toMatchObject({ verified: true, failures: [] })
   })
 
@@ -56,6 +59,11 @@ describe('PostgreSQL CI release evidence', () => {
       verified: false,
       failures: ['expected migration baseline is invalid', 'release evidence baseline does not match audit baseline'],
     })
+  })
+
+  it('requires a production commit identity', () => {
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, releaseCommitSha: undefined }).failures)
+      .toContain('release commit identity is invalid')
   })
 
   it('throws actionable diagnostics when evidence is not releasable', () => {
