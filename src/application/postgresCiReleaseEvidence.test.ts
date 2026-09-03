@@ -39,6 +39,20 @@ describe('PostgreSQL CI release evidence', () => {
     ])
   })
 
+  it('rejects control characters in release identity and verification checks', () => {
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, releaseId: 'release-1\nprod' }).failures)
+      .toContain('release identity contains control characters')
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, checks: ['preflight\tpassed'] }).failures)
+      .toContain('verification checks contain control characters')
+  })
+
+  it('rejects invalid applied migration counts', () => {
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, migrationsApplied: Number.NaN }).failures)
+      .toContain('applied migration count is invalid')
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, migrationsApplied: 1.5 }).failures)
+      .toContain('applied migration count is invalid')
+  })
+
   it('reports the exact failed CI gates', () => {
     expect(verifyPostgresCiReleaseEvidence({
       ...audit,
