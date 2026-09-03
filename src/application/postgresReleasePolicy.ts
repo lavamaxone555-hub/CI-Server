@@ -2,6 +2,7 @@ export interface PostgresReleasePolicyInput {
   environment: 'development' | 'test' | 'production'
   evidenceReady: boolean
   migrationsApplied: number
+  expectedMigrationBaseline?: number
 }
 
 export interface PostgresReleasePolicy {
@@ -17,6 +18,13 @@ export function evaluatePostgresReleasePolicy(
   if (!input.evidenceReady) reasons.push('deployment evidence is incomplete')
   if (input.environment === 'production' && input.migrationsApplied < 1) {
     reasons.push('production release requires an established migration baseline')
+  }
+  if (
+    input.environment === 'production'
+    && input.expectedMigrationBaseline !== undefined
+    && input.migrationsApplied < input.expectedMigrationBaseline
+  ) {
+    reasons.push('production release migration baseline is below the expected level')
   }
 
   return { releasable: reasons.length === 0, reasons }
