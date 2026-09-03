@@ -45,6 +45,13 @@ describe('PostgreSQL release audit trail', () => {
     expect(audit.checks).toEqual(['preflight passed', 'readiness passed'])
   })
 
+  it('rejects audit release identities containing control characters', () => {
+    expect(() => createPostgresReleaseAuditRecord({
+      environment: 'production', evidenceReady: true, releaseApproved: true,
+      migrationsApplied: 1, releaseId: 'release\n1', checks: ['passed'],
+    })).toThrow('release audit identity must not contain control characters')
+  })
+
   it('freezes the audit record and its verification checks', () => {
     const audit = createPostgresReleaseAuditRecord({
       environment: 'production',
