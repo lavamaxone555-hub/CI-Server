@@ -20,4 +20,17 @@ describe('PostgreSQL migration lock', () => {
       .rejects.toThrow('failed')
     expect(statements).toHaveLength(2)
   })
+
+  it('preserves the migration failure when advisory unlock also fails', async () => {
+    let calls = 0
+    const pool = {
+      query: async () => {
+        calls += 1
+        if (calls === 2) throw new Error('unlock failed')
+      },
+      end: async () => {},
+    }
+    await expect(withPostgresMigrationLock(pool, async () => { throw new Error('migration failed') }))
+      .rejects.toThrow('migration failed')
+  })
 })
