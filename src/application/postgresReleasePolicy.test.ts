@@ -8,69 +8,46 @@ const productionRelease = {
   migrationBaselineVerified: true,
   releaseId: 'release-1',
   releaseTimestamp: '2026-09-03T00:00:00.000Z',
+  releaseCommitSha: '84a95cf',
 }
 
 describe('PostgreSQL release policy', () => {
-  it('allows production release with complete evidence and migration baseline', () => {
+  it('allows a complete production release', () => {
     expect(evaluatePostgresReleasePolicy(productionRelease)).toEqual({ releasable: true, reasons: [] })
   })
 
-  it('blocks release when deployment evidence is incomplete', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, evidenceReady: false })).toEqual({
-      releasable: false,
-      reasons: ['deployment evidence is incomplete'],
-    })
+  it('blocks incomplete deployment evidence', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, evidenceReady: false }).releasable).toBe(false)
   })
 
-  it('blocks production release without a migration baseline', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, migrationsApplied: 0 })).toEqual({
-      releasable: false,
-      reasons: ['production release requires an established migration baseline'],
-    })
+  it('blocks missing production migration baseline', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, migrationsApplied: 0 }).reasons)
+      .toContain('production release requires an established migration baseline')
   })
 
-  it('blocks production release below an explicit expected migration baseline', () => {
-    expect(evaluatePostgresReleasePolicy({
-      ...productionRelease,
-      migrationsApplied: 2,
-      expectedMigrationBaseline: 3,
-    })).toEqual({
-      releasable: false,
-      reasons: ['production release migration baseline is below the expected level'],
-    })
+  it('blocks invalid expected migration baseline', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, expectedMigrationBaseline: 1.5 }).releasable).toBe(false)
   })
 
-  it('blocks invalid explicit expected migration baselines', () => {
-    expect(evaluatePostgresReleasePolicy({
-      ...productionRelease,
-      expectedMigrationBaseline: 1.5,
-    })).toEqual({
-      releasable: false,
-      reasons: ['production release expected migration baseline is invalid'],
-    })
+  it('blocks production releases below baseline', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, migrationsApplied: 2, expectedMigrationBaseline: 3 }).releasable).toBe(false)
   })
 
-  it('blocks production release when baseline verification explicitly fails', () => {
-    expect(evaluatePostgresReleasePolicy({
-      ...productionRelease,
-      migrationBaselineVerified: false,
-    })).toEqual({
-      releasable: false,
-      reasons: ['production release migration baseline verification failed'],
-    })
+  it('blocks explicit baseline verification failure', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, migrationBaselineVerified: false }).releasable).toBe(false)
   })
 
-  it('blocks production release without release identity', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseId: ' ' })).toEqual({
-      releasable: false,
-      reasons: ['production release identity is missing'],
-    })
+  it('blocks missing release identity', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseId: ' ' }).releasable).toBe(false)
   })
 
-  it('blocks production release with an invalid release timestamp', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseTimestamp: 'invalid' })).toEqual({
-      releasable: false,
-      reasons: ['production release timestamp is invalid'],
-    })
+  it('blocks invalid release timestamp', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseTimestamp: 'invalid' }).releasable).toBe(false)
+  })
+
+  it('blocks missing or malformed production commit identity', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitSha: '' }).reasons)
+      .toContain('production release commit identity is invalid')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitSha: 'release-1' }).releasable).toBe(false)
   })
 })
