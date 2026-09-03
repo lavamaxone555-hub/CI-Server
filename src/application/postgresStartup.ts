@@ -9,6 +9,7 @@ import { verifyPostgresPostRestore } from './postgresPostRestoreVerification'
 import { createPostgresDeploymentEvidence } from './postgresDeploymentEvidence'
 import { evaluatePostgresReleasePolicy } from './postgresReleasePolicy'
 import { createPostgresReleaseAuditRecord } from './postgresReleaseAuditTrail'
+import { assertPostgresCiReleaseEvidence } from './postgresCiReleaseEvidence'
 
 export interface PostgresStartupResult {
   migrations: string[]
@@ -53,6 +54,7 @@ export async function startPostgresInfrastructure(
       environment: config.environment,
       evidenceReady: evidence.ready,
       migrationsApplied: verification.migrationsApplied,
+      migrationBaselineVerified: verification.migrationsApplied > 0,
     })
     if (!policy.releasable) throw new Error(policy.reasons.join('; '))
 
@@ -63,6 +65,7 @@ export async function startPostgresInfrastructure(
       migrationsApplied: verification.migrationsApplied,
       checks: evidence.checks,
     })
+    assertPostgresCiReleaseEvidence(audit)
 
     return {
       migrations,
