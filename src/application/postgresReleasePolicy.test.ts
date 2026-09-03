@@ -30,4 +30,14 @@ describe('PostgreSQL release policy', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitSha: 'release-1' }).releasable).toBe(false)
   })
   it('blocks explicit empty production verification checks', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, verificationChecks: [] }).reasons).toContain('production release verification checks are missing'))
+  it('blocks readiness latency above the production threshold', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessLatencyMs: 250, maxReadinessLatencyMs: 200 }).reasons)
+      .toContain('production readiness latency exceeds the allowed threshold')
+  })
+  it('blocks invalid production readiness latency metadata', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessLatencyMs: -1 }).reasons)
+      .toContain('production readiness latency is invalid')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReadinessLatencyMs: 0 }).reasons)
+      .toContain('production readiness latency threshold is invalid')
+  })
 })
