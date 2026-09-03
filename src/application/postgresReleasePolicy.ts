@@ -4,6 +4,8 @@ export interface PostgresReleasePolicyInput {
   migrationsApplied: number
   expectedMigrationBaseline?: number
   migrationBaselineVerified?: boolean
+  releaseId?: string
+  releaseTimestamp?: string
 }
 
 export interface PostgresReleasePolicy {
@@ -29,6 +31,15 @@ export function evaluatePostgresReleasePolicy(
   }
   if (input.environment === 'production' && input.migrationBaselineVerified === false) {
     reasons.push('production release migration baseline verification failed')
+  }
+  if (input.environment === 'production' && !input.releaseId?.trim()) {
+    reasons.push('production release identity is missing')
+  }
+  if (
+    input.environment === 'production'
+    && (!input.releaseTimestamp || Number.isNaN(Date.parse(input.releaseTimestamp)))
+  ) {
+    reasons.push('production release timestamp is invalid')
   }
 
   return { releasable: reasons.length === 0, reasons }

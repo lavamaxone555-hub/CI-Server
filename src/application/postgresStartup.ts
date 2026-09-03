@@ -22,6 +22,7 @@ export interface PostgresStartupResult {
   releaseApproved: boolean
   releaseAuditEvent: string
   releaseId: string
+  releaseTimestamp: string
 }
 
 export async function startPostgresInfrastructure(
@@ -51,11 +52,14 @@ export async function startPostgresInfrastructure(
     })
     if (!evidence.ready) throw new Error('database release evidence is incomplete')
 
+    const releaseTimestamp = new Date().toISOString()
     const policy = evaluatePostgresReleasePolicy({
       environment: config.environment,
       evidenceReady: evidence.ready,
       migrationsApplied: verification.migrationsApplied,
       migrationBaselineVerified: verification.migrationsApplied > 0,
+      releaseId: config.releaseId,
+      releaseTimestamp,
     })
     if (!policy.releasable) throw new Error(policy.reasons.join('; '))
 
@@ -66,6 +70,7 @@ export async function startPostgresInfrastructure(
       migrationsApplied: verification.migrationsApplied,
       checks: evidence.checks,
       releaseId: config.releaseId,
+      createdAt: releaseTimestamp,
     })
     assertPostgresCiReleaseEvidence(audit)
 
@@ -80,6 +85,7 @@ export async function startPostgresInfrastructure(
       releaseApproved: policy.releasable,
       releaseAuditEvent: audit.event,
       releaseId: config.releaseId,
+      releaseTimestamp,
     }
   } finally {
     await pool.end()
