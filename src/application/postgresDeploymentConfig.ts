@@ -3,6 +3,7 @@ import { loadDatabaseConfig, type DatabaseConfig } from './databaseConfig'
 export interface PostgresDeploymentConfig extends DatabaseConfig {
   environment: 'development' | 'test' | 'production'
   migrationOnStartup: boolean
+  releaseId: string
 }
 
 export function loadPostgresDeploymentConfig(
@@ -20,5 +21,9 @@ export function loadPostgresDeploymentConfig(
   if (environment === 'production' && migrationOnStartup && env.DATABASE_MIGRATION_APPROVED !== 'true') {
     throw new Error('DATABASE_MIGRATION_APPROVED=true is required for production startup migrations')
   }
-  return { ...database, environment, migrationOnStartup }
+  const releaseId = env.RELEASE_ID?.trim() || 'local'
+  if (environment === 'production' && releaseId === 'local') {
+    throw new Error('RELEASE_ID is required in production')
+  }
+  return { ...database, environment, migrationOnStartup, releaseId }
 }

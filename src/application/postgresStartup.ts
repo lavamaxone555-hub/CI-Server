@@ -21,6 +21,7 @@ export interface PostgresStartupResult {
   releaseEvidenceReady: boolean
   releaseApproved: boolean
   releaseAuditEvent: string
+  releaseId: string
 }
 
 export async function startPostgresInfrastructure(
@@ -64,6 +65,7 @@ export async function startPostgresInfrastructure(
       releaseApproved: policy.releasable,
       migrationsApplied: verification.migrationsApplied,
       checks: evidence.checks,
+      releaseId: config.releaseId,
     })
     assertPostgresCiReleaseEvidence(audit)
 
@@ -77,6 +79,7 @@ export async function startPostgresInfrastructure(
       releaseEvidenceReady: evidence.ready,
       releaseApproved: policy.releasable,
       releaseAuditEvent: audit.event,
+      releaseId: config.releaseId,
     }
   } finally {
     await pool.end()

@@ -10,6 +10,7 @@ describe('PostgreSQL deployment preflight', () => {
       DATABASE_URL: databaseUrl,
       DATABASE_SSL: 'true',
       DATABASE_MIGRATION_APPROVED: 'true',
+      RELEASE_ID: 'release-preflight-test',
     })).toEqual({
       ready: true,
       checks: [
@@ -27,5 +28,14 @@ describe('PostgreSQL deployment preflight', () => {
       DATABASE_URL: databaseUrl,
       DATABASE_SSL: 'true',
     })).toThrow('DATABASE_MIGRATION_APPROVED=true is required')
+  })
+
+  it('fails production preflight without a release identity', () => {
+    expect(() => verifyPostgresDeploymentPreflight({
+      NODE_ENV: 'production',
+      DATABASE_URL: databaseUrl,
+      DATABASE_SSL: 'true',
+      DATABASE_MIGRATE_ON_STARTUP: 'false',
+    })).toThrow('RELEASE_ID is required in production')
   })
 })
