@@ -35,6 +35,7 @@ export async function initializePostgresDatabase(
       if (pending.length === 0) return []
       const executor = createPostgresMigrationExecutor(pool)
       await executor.begin()
+      let migrationError: unknown
       try {
         for (const migration of pending) {
           await executor.execute(migration.sql)
@@ -43,9 +44,15 @@ export async function initializePostgresDatabase(
         await executor.commit()
         return pending.map((migration) => migration.name)
       } catch (error) {
-        await executor.rollback()
-        throw error
+        migrationError = error
       }
+
+      try {
+        await executor.rollback()
+      } catch (rollbackError) {
+        if (migrationError === undefined) throw rollbackError
+      }
+      throw migrationError
     })
   } finally {
     await pool.end()
