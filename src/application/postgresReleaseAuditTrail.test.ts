@@ -8,6 +8,7 @@ describe('PostgreSQL release audit trail', () => {
       evidenceReady: true,
       releaseApproved: true,
       migrationsApplied: 3,
+      expectedMigrationBaseline: 3,
       checks: ['preflight passed'],
       releaseId: 'release-2026-09-03',
       createdAt: '2026-09-03T00:00:00.000Z',
@@ -21,11 +22,12 @@ describe('PostgreSQL release audit trail', () => {
       evidenceReady: true,
       releaseApproved: true,
       migrationsApplied: 3,
+      expectedMigrationBaseline: 3,
       checks: ['preflight passed'],
     })
   })
 
-  it('creates audit metadata when callers do not provide it', () => {
+  it('preserves legacy audit shape when baseline is absent', () => {
     const audit = createPostgresReleaseAuditRecord({
       environment: 'test',
       evidenceReady: true,
@@ -34,8 +36,8 @@ describe('PostgreSQL release audit trail', () => {
       checks: ['verification passed'],
     })
 
+    expect(audit).not.toHaveProperty('expectedMigrationBaseline')
     expect(audit.releaseId).toBe('local')
-    expect(audit.createdAt).toBeDefined()
     expect(Number.isNaN(Date.parse(audit.createdAt!))).toBe(false)
   })
 })

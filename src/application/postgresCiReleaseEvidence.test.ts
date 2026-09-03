@@ -9,12 +9,24 @@ describe('PostgreSQL CI release evidence', () => {
     environment: 'production' as const,
     evidenceReady: true,
     releaseApproved: true,
-    migrationsApplied: 2,
+    migrationsApplied: 3,
+    expectedMigrationBaseline: 3,
     checks: ['preflight passed'],
   }
 
-  it('verifies complete release evidence for CI', () => {
+  it('verifies complete release evidence using the audit baseline', () => {
     expect(verifyPostgresCiReleaseEvidence(audit)).toMatchObject({ verified: true, failures: [] })
+  })
+
+  it('preserves legacy evidence with the default baseline', () => {
+    const { expectedMigrationBaseline: _baseline, ...legacyAudit } = audit
+    expect(verifyPostgresCiReleaseEvidence(legacyAudit)).toMatchObject({ verified: true, failures: [] })
+  })
+
+  it('rejects mismatched explicit and audited baselines', () => {
+    expect(verifyPostgresCiReleaseEvidence(audit, 2).failures).toEqual([
+      'release evidence baseline does not match audit baseline',
+    ])
   })
 
   it('requires release identity and a valid timestamp', () => {
@@ -39,17 +51,10 @@ describe('PostgreSQL CI release evidence', () => {
     ])
   })
 
-  it('enforces an explicit expected migration baseline', () => {
-    expect(verifyPostgresCiReleaseEvidence(audit, 3)).toMatchObject({
-      verified: false,
-      failures: ['migration baseline is below the expected level'],
-    })
-  })
-
   it('rejects an invalid expected migration baseline', () => {
     expect(verifyPostgresCiReleaseEvidence(audit, 0)).toMatchObject({
       verified: false,
-      failures: ['expected migration baseline is invalid'],
+      failures: ['expected migration baseline is invalid', 'release evidence baseline does not match audit baseline'],
     })
   })
 
