@@ -36,7 +36,7 @@ describe.runIf(url)('PostgreSQL CI release evidence integration', () => {
       const evidence = assertPostgresCiReleaseEvidence(audit)
       const report = createPostgresCiReleaseEvidenceReport(evidence)
       expect(report.status).toBe('passed')
-      expect(report.details).toHaveLength(4)
+      expect(report.details).toHaveLength(8)
     } finally {
       await pool.end()
     }

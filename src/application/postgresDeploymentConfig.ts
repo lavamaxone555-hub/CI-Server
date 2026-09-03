@@ -13,7 +13,7 @@ function isCommitSha(value: string | undefined): boolean {
 }
 
 function hasControlCharacters(value: string): boolean {
-  return /[\u0000-\u001f\u007f]/.test(value)
+  return Array.from(value, (character) => character.charCodeAt(0)).some((code) => code <= 0x1f || code === 0x7f)
 }
 
 function normalizeReleaseId(value: string | undefined): string {
