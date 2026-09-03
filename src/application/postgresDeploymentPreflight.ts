@@ -16,6 +16,16 @@ export function verifyPostgresDeploymentPreflight(
   if (config.environment === 'production') {
     if (config.ssl) checks.push('production SSL enabled')
     else failures.push('production SSL must be enabled')
+
+    if (config.releaseId.trim()) checks.push('production release identity verified')
+    else failures.push('production release identity is missing')
+
+    if (Number.isInteger(config.expectedMigrationBaseline) && config.expectedMigrationBaseline >= 1) {
+      checks.push('production migration baseline configured')
+    } else {
+      failures.push('production migration baseline is invalid')
+    }
+
     if (config.migrationOnStartup) checks.push('production migration explicitly approved')
     else checks.push('startup migrations disabled')
   }
