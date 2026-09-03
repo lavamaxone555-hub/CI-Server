@@ -54,6 +54,13 @@ describe('PostgreSQL CI release evidence', () => {
     ])
   })
 
+  it('rejects empty or duplicate verification checks', () => {
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, checks: ['preflight passed', ''] }).failures)
+      .toContain('verification checks contain an empty entry')
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, checks: ['preflight passed', 'preflight passed'] }).failures)
+      .toContain('verification checks contain duplicate entries')
+  })
+
   it('rejects an invalid expected migration baseline', () => {
     expect(verifyPostgresCiReleaseEvidence(audit, 0)).toMatchObject({
       verified: false,

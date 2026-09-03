@@ -11,6 +11,10 @@ function isCommitSha(value: string | undefined): boolean {
   return !!value && /^[0-9a-f]{7,64}$/i.test(value)
 }
 
+function hasDuplicateChecks(checks: readonly string[]): boolean {
+  return new Set(checks.map((check) => check.trim())).size !== checks.length
+}
+
 export function verifyPostgresCiReleaseEvidence(
   audit: PostgresReleaseAuditRecord,
   expectedMigrationBaseline?: number,
@@ -31,6 +35,8 @@ export function verifyPostgresCiReleaseEvidence(
   if (!audit.releaseApproved) failures.push('release approval is missing')
   if (audit.migrationsApplied < baseline) failures.push('migration baseline is below the expected level')
   if (audit.checks.length < 1) failures.push('verification checks are missing')
+  if (audit.checks.some((check) => !check.trim())) failures.push('verification checks contain an empty entry')
+  if (hasDuplicateChecks(audit.checks)) failures.push('verification checks contain duplicate entries')
   const verified = failures.length === 0
   return { verified, summary: verified ? 'postgres release evidence verified' : 'postgres release evidence verification failed', failures, audit }
 }
