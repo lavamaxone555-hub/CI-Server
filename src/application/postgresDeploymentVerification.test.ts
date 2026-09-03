@@ -10,10 +10,27 @@ describe('PostgreSQL deployment verification', () => {
       },
       end: async () => {},
     }
-    await expect(verifyPostgresDeployment(pool)).resolves.toMatchObject({
+    await expect(verifyPostgresDeployment(pool, 1)).resolves.toMatchObject({
       ready: true,
       migrationsApplied: 1,
+      migrationBaselineVerified: true,
       readiness: { ready: true },
+    })
+  })
+
+  it('fails when the migration baseline is below the expected level', async () => {
+    const pool = {
+      query: async (sql: string) => {
+        if (sql === 'SELECT 1') return { rows: [] }
+        return { rows: [{ name: '001.sql', checksum: 'abc' }] }
+      },
+      end: async () => {},
+    }
+    await expect(verifyPostgresDeployment(pool, 2)).resolves.toMatchObject({
+      ready: false,
+      migrationsApplied: 1,
+      migrationBaselineVerified: false,
+      readiness: { ready: false, reason: 'migration baseline is below the expected level' },
     })
   })
 
@@ -25,6 +42,7 @@ describe('PostgreSQL deployment verification', () => {
     await expect(verifyPostgresDeployment(pool)).resolves.toMatchObject({
       ready: false,
       migrationsApplied: 0,
+      migrationBaselineVerified: false,
       readiness: { ready: false, reason: 'connection refused' },
     })
   })
