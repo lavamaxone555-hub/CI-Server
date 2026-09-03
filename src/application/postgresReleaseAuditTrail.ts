@@ -20,11 +20,18 @@ export interface PostgresReleaseAuditRecord {
   migrationsApplied: number
   expectedMigrationBaseline?: number
   releaseCommitSha?: string
-  checks: string[]
+  checks: readonly string[]
+}
+
+function freezeAuditRecord(record: PostgresReleaseAuditRecord): PostgresReleaseAuditRecord {
+  return Object.freeze({
+    ...record,
+    checks: Object.freeze([...record.checks]),
+  })
 }
 
 export function createPostgresReleaseAuditRecord(input: PostgresReleaseAuditInput): PostgresReleaseAuditRecord {
-  return {
+  return freezeAuditRecord({
     event: 'postgres-release-verification',
     releaseId: input.releaseId ?? 'local',
     createdAt: input.createdAt ?? new Date().toISOString(),
@@ -35,5 +42,5 @@ export function createPostgresReleaseAuditRecord(input: PostgresReleaseAuditInpu
     ...(input.expectedMigrationBaseline === undefined ? {} : { expectedMigrationBaseline: input.expectedMigrationBaseline }),
     ...(input.releaseCommitSha === undefined ? {} : { releaseCommitSha: input.releaseCommitSha }),
     checks: [...input.checks],
-  }
+  })
 }

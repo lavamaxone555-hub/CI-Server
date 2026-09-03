@@ -9,6 +9,7 @@ describe('PostgreSQL release audit trail', () => {
       releaseApproved: true,
       migrationsApplied: 3,
       expectedMigrationBaseline: 3,
+      releaseCommitSha: '84a95cf',
       checks: ['preflight passed'],
       releaseId: 'release-2026-09-03',
       createdAt: '2026-09-03T00:00:00.000Z',
@@ -23,8 +24,23 @@ describe('PostgreSQL release audit trail', () => {
       releaseApproved: true,
       migrationsApplied: 3,
       expectedMigrationBaseline: 3,
+      releaseCommitSha: '84a95cf',
       checks: ['preflight passed'],
     })
+  })
+
+  it('freezes the audit record and its verification checks', () => {
+    const audit = createPostgresReleaseAuditRecord({
+      environment: 'production',
+      evidenceReady: true,
+      releaseApproved: true,
+      migrationsApplied: 1,
+      checks: ['verification passed'],
+    })
+
+    expect(Object.isFrozen(audit)).toBe(true)
+    expect(Object.isFrozen(audit.checks)).toBe(true)
+    expect(() => (audit.checks as string[]).push('tampered')).toThrow()
   })
 
   it('preserves legacy audit shape when baseline is absent', () => {
