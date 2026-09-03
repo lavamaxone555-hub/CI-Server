@@ -1,20 +1,18 @@
 # Next Autonomous Task
 
-## Phase 5 — Production Database Infrastructure
+## Phase 6 — Production Readiness
 
 ## Status
-Phase 5 hardening baseline: COMPLETE
+IN PROGRESS
 
 ## Verified Baseline
-- Real PostgreSQL CI integration: VERIFIED
-- Production migration set against CI PostgreSQL: VERIFIED
-- Failure propagation through rollback: VERIFIED
-- Latest server-side CI: SUCCESS
-- Commit: 804b77d
-- Run ID: 33716828029
+- Phase 5 hardening baseline: COMPLETE
+- Latest release-policy CI: SUCCESS
+- Commit: 9633ba0
+- Run ID: 33719919943
 
 ## Next Work
-Start a separately scoped production-readiness phase.
+Production readiness hardening: operational safeguards, deployment readiness, and final release gates.
 
 ## Rule
 Inspect -> Implement -> Test -> Typecheck -> Build -> Lint -> Commit -> Push -> Server CI -> Update Status.

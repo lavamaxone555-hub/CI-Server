@@ -3,31 +3,29 @@
 Last updated: 2026-09-03
 
 ## Current Phase
-Phase 5 — Production Database Infrastructure
+Phase 6 — Production Readiness
 
 ## Completed
 ### Phase 4 — Production Architecture & Real Workflows
 - COMPLETE
 
 ### Phase 5 — PostgreSQL Infrastructure
-- PostgreSQL configuration / SSL / pool / connection probe: COMPLETE
-- Migration runner, safety checks, locking and rollback: COMPLETE
-- Health / readiness / startup validation: COMPLETE
-- Deployment preflight and deployment verification: COMPLETE
-- Recovery readiness and post-restore consistency: COMPLETE
-- Release evidence, release policy and audit trail: COMPLETE
-- CI-side release evidence verification: COMPLETE
-- Live PostgreSQL CI evidence integration: VERIFIED PASS
+- COMPLETE
+- Real PostgreSQL CI integration: VERIFIED PASS
 - Failure propagation hardening: COMPLETE
 
+### Phase 6 — Production Readiness
+- Release policy with expected migration baseline: COMPLETE
+- Server-side CI proof: VERIFIED PASS
+
 ## Latest Server-side CI Proof
-- Commit: 804b77dbf4bbccb6a7dc3f1c56588ab1557e4376
+- Commit: 9633ba02ba7ee8d3f9ce72c96012b820f2a02a7e
 - Workflow: Project-App CI
-- Run: 33716828029
+- Run: 33719919943
 - Result: SUCCESS
 
 ## Current Priority
-Phase 5 hardening baseline is complete. Next work should be a separately scoped production-readiness phase rather than unbounded migration changes.
+Continue Phase 6 production-readiness safeguards.
 
 ## Rule
 Inspect -> Implement -> Test -> Typecheck -> Build -> Lint -> Commit -> Push -> Server CI -> Update Status.
