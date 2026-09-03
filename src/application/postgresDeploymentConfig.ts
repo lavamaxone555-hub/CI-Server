@@ -12,6 +12,18 @@ function isCommitSha(value: string | undefined): boolean {
   return !!value && /^[0-9a-f]{7,64}$/i.test(value)
 }
 
+function hasControlCharacters(value: string): boolean {
+  return /[\u0000-\u001f\u007f]/.test(value)
+}
+
+function normalizeReleaseId(value: string | undefined): string {
+  const releaseId = value?.trim() || 'local'
+  if (hasControlCharacters(releaseId)) {
+    throw new Error('RELEASE_ID must not contain control characters')
+  }
+  return releaseId
+}
+
 export function loadPostgresDeploymentConfig(
   env: Record<string, string | undefined> = process.env,
 ): PostgresDeploymentConfig {
@@ -27,7 +39,7 @@ export function loadPostgresDeploymentConfig(
   if (environment === 'production' && migrationOnStartup && env.DATABASE_MIGRATION_APPROVED !== 'true') {
     throw new Error('DATABASE_MIGRATION_APPROVED=true is required for production startup migrations')
   }
-  const releaseId = env.RELEASE_ID?.trim() || 'local'
+  const releaseId = normalizeReleaseId(env.RELEASE_ID)
   if (environment === 'production' && releaseId === 'local') {
     throw new Error('RELEASE_ID is required in production')
   }

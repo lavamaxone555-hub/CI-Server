@@ -30,4 +30,11 @@ describe('PostgreSQL deployment config', () => {
       RELEASE_ID: 'r1', RELEASE_COMMIT_SHA: 'release-1',
     })).toThrow('RELEASE_COMMIT_SHA')
   })
+
+  it('rejects release identities containing control characters', () => {
+    expect(() => loadPostgresDeploymentConfig({ ...base, RELEASE_ID: 'release\n1' }))
+      .toThrow('RELEASE_ID must not contain control characters')
+    expect(() => loadPostgresDeploymentConfig({ ...base, RELEASE_ID: '\u0000release' }))
+      .toThrow('RELEASE_ID must not contain control characters')
+  })
 })
