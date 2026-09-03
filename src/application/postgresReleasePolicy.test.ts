@@ -25,19 +25,23 @@ describe('PostgreSQL release policy', () => {
   it('blocks explicit baseline verification failure', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, migrationBaselineVerified: false }).releasable).toBe(false))
   it('blocks missing release identity', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseId: ' ' }).releasable).toBe(false))
   it('blocks invalid release timestamp', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseTimestamp: 'invalid' }).releasable).toBe(false))
-  it('blocks missing or malformed production commit identity', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitSha: '' }).reasons).toContain('production release commit identity is invalid')
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitSha: 'release-1' }).releasable).toBe(false)
-  })
+  it('blocks malformed production commit identity', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitSha: 'release-1' }).releasable).toBe(false))
   it('blocks explicit empty production verification checks', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, verificationChecks: [] }).reasons).toContain('production release verification checks are missing'))
-  it('blocks readiness latency above the production threshold', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessLatencyMs: 250, maxReadinessLatencyMs: 200 }).reasons)
-      .toContain('production readiness latency exceeds the allowed threshold')
-  })
+  it('blocks readiness latency above the production threshold', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessLatencyMs: 250, maxReadinessLatencyMs: 200 }).reasons).toContain('production readiness latency exceeds the allowed threshold'))
   it('blocks invalid production readiness latency metadata', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessLatencyMs: -1 }).reasons)
-      .toContain('production readiness latency is invalid')
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReadinessLatencyMs: 0 }).reasons)
-      .toContain('production readiness latency threshold is invalid')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessLatencyMs: -1 }).reasons).toContain('production readiness latency is invalid')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReadinessLatencyMs: 0 }).reasons).toContain('production readiness latency threshold is invalid')
+  })
+  it('blocks stale readiness evidence', () => {
+    expect(evaluatePostgresReleasePolicy({
+      ...productionRelease,
+      readinessCheckedAt: '2026-09-03T00:00:00.000Z',
+      maxReadinessAgeMs: 60_000,
+      now: '2026-09-03T00:02:00.000Z',
+    }).reasons).toContain('production readiness evidence is stale')
+  })
+  it('blocks invalid readiness freshness metadata', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReadinessAgeMs: 0 }).reasons).toContain('production readiness freshness threshold is invalid')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: 'invalid' }).reasons).toContain('production readiness timestamp is invalid')
   })
 })

@@ -12,6 +12,9 @@ export interface PostgresReleasePolicyInput {
   deploymentVerificationReady?: boolean
   readinessLatencyMs?: number
   maxReadinessLatencyMs?: number
+  readinessCheckedAt?: string
+  maxReadinessAgeMs?: number
+  now?: string
 }
 
 export interface PostgresReleasePolicy {
@@ -21,6 +24,12 @@ export interface PostgresReleasePolicy {
 
 function isCommitSha(value: string | undefined): boolean {
   return !!value && /^[0-9a-f]{7,64}$/i.test(value)
+}
+
+function parseTimestamp(value: string | undefined): number | undefined {
+  if (!value) return undefined
+  const timestamp = Date.parse(value)
+  return Number.isNaN(timestamp) ? undefined : timestamp
 }
 
 export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput): PostgresReleasePolicy {
@@ -39,15 +48,17 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
   if (input.environment === 'production' && input.verificationChecks !== undefined && input.verificationChecks.length < 1) reasons.push('production release verification checks are missing')
 
   if (input.environment === 'production') {
-    if (input.maxReadinessLatencyMs !== undefined && (!Number.isFinite(input.maxReadinessLatencyMs) || input.maxReadinessLatencyMs <= 0)) {
-      reasons.push('production readiness latency threshold is invalid')
-    }
-    if (input.readinessLatencyMs !== undefined && (!Number.isFinite(input.readinessLatencyMs) || input.readinessLatencyMs < 0)) {
-      reasons.push('production readiness latency is invalid')
-    }
-    if (input.readinessLatencyMs !== undefined && input.maxReadinessLatencyMs !== undefined
-      && input.readinessLatencyMs > input.maxReadinessLatencyMs) {
-      reasons.push('production readiness latency exceeds the allowed threshold')
+    if (input.maxReadinessLatencyMs !== undefined && (!Number.isFinite(input.maxReadinessLatencyMs) || input.maxReadinessLatencyMs <= 0)) reasons.push('production readiness latency threshold is invalid')
+    if (input.readinessLatencyMs !== undefined && (!Number.isFinite(input.readinessLatencyMs) || input.readinessLatencyMs < 0)) reasons.push('production readiness latency is invalid')
+    if (input.readinessLatencyMs !== undefined && input.maxReadinessLatencyMs !== undefined && input.readinessLatencyMs > input.maxReadinessLatencyMs) reasons.push('production readiness latency exceeds the allowed threshold')
+
+    if (input.maxReadinessAgeMs !== undefined && (!Number.isFinite(input.maxReadinessAgeMs) || input.maxReadinessAgeMs <= 0)) reasons.push('production readiness freshness threshold is invalid')
+    if (input.readinessCheckedAt !== undefined && parseTimestamp(input.readinessCheckedAt) === undefined) reasons.push('production readiness timestamp is invalid')
+
+    if (input.readinessCheckedAt !== undefined && input.maxReadinessAgeMs !== undefined) {
+      const checkedAt = parseTimestamp(input.readinessCheckedAt)
+      const now = parseTimestamp(input.now) ?? Date.now()
+      if (checkedAt !== undefined && now - checkedAt > input.maxReadinessAgeMs) reasons.push('production readiness evidence is stale')
     }
   }
 
