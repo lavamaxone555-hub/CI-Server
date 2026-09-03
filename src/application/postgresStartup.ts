@@ -59,8 +59,9 @@ export async function startPostgresInfrastructure(
       environment: config.environment, evidenceReady: evidence.ready, releaseApproved: policy.releasable,
       migrationsApplied: verification.migrationsApplied, checks: evidence.checks,
       releaseId: config.releaseId, createdAt: releaseTimestamp,
+      expectedMigrationBaseline: config.expectedMigrationBaseline,
     })
-    assertPostgresCiReleaseEvidence(audit, config.expectedMigrationBaseline)
+    assertPostgresCiReleaseEvidence(audit)
     return {
       migrations, readiness: verification.readiness, migrationsApplied: verification.migrationsApplied,
       preflightChecks: preflight.checks, recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks,

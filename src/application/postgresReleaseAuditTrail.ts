@@ -6,6 +6,7 @@ export interface PostgresReleaseAuditInput {
   checks: readonly string[]
   releaseId?: string
   createdAt?: string
+  expectedMigrationBaseline?: number
 }
 
 export interface PostgresReleaseAuditRecord {
@@ -16,12 +17,11 @@ export interface PostgresReleaseAuditRecord {
   evidenceReady: boolean
   releaseApproved: boolean
   migrationsApplied: number
+  expectedMigrationBaseline?: number
   checks: string[]
 }
 
-export function createPostgresReleaseAuditRecord(
-  input: PostgresReleaseAuditInput,
-): PostgresReleaseAuditRecord {
+export function createPostgresReleaseAuditRecord(input: PostgresReleaseAuditInput): PostgresReleaseAuditRecord {
   return {
     event: 'postgres-release-verification',
     releaseId: input.releaseId ?? 'local',
@@ -30,6 +30,7 @@ export function createPostgresReleaseAuditRecord(
     evidenceReady: input.evidenceReady,
     releaseApproved: input.releaseApproved,
     migrationsApplied: input.migrationsApplied,
+    ...(input.expectedMigrationBaseline === undefined ? {} : { expectedMigrationBaseline: input.expectedMigrationBaseline }),
     checks: [...input.checks],
   }
 }
