@@ -5,6 +5,11 @@ export interface PostgresDeploymentConfig extends DatabaseConfig {
   migrationOnStartup: boolean
   releaseId: string
   expectedMigrationBaseline: number
+  releaseCommitSha?: string
+}
+
+function isCommitSha(value: string | undefined): boolean {
+  return !!value && /^[0-9a-f]{7,64}$/i.test(value)
 }
 
 export function loadPostgresDeploymentConfig(
@@ -31,5 +36,9 @@ export function loadPostgresDeploymentConfig(
   if (!Number.isInteger(expectedMigrationBaseline) || expectedMigrationBaseline < 1) {
     throw new Error('DATABASE_EXPECTED_MIGRATION_BASELINE must be a positive integer')
   }
-  return { ...database, environment, migrationOnStartup, releaseId, expectedMigrationBaseline }
+  const releaseCommitSha = env.RELEASE_COMMIT_SHA?.trim()
+  if (environment === 'production' && !isCommitSha(releaseCommitSha)) {
+    throw new Error('RELEASE_COMMIT_SHA must be a valid commit SHA in production')
+  }
+  return { ...database, environment, migrationOnStartup, releaseId, expectedMigrationBaseline, releaseCommitSha }
 }

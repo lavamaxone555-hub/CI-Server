@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { verifyPostgresDeploymentPreflight } from './postgresDeploymentPreflight'
 
 const databaseUrl = 'postgresql://user:password@localhost:5432/app'
+const releaseCommitSha = '84a95cf'
 
 describe('PostgreSQL deployment preflight', () => {
   it('reports production safety checks', () => {
     expect(verifyPostgresDeploymentPreflight({
       NODE_ENV: 'production', DATABASE_URL: databaseUrl, DATABASE_SSL: 'true',
       DATABASE_MIGRATION_APPROVED: 'true', RELEASE_ID: 'release-preflight-test',
-      DATABASE_EXPECTED_MIGRATION_BASELINE: '2',
+      RELEASE_COMMIT_SHA: releaseCommitSha, DATABASE_EXPECTED_MIGRATION_BASELINE: '2',
     })).toEqual({
       ready: true,
       checks: [
@@ -25,7 +26,7 @@ describe('PostgreSQL deployment preflight', () => {
   it('reports disabled startup migrations as an explicit production check', () => {
     expect(verifyPostgresDeploymentPreflight({
       NODE_ENV: 'production', DATABASE_URL: databaseUrl, DATABASE_SSL: 'true',
-      DATABASE_MIGRATE_ON_STARTUP: 'false', RELEASE_ID: 'release-1',
+      DATABASE_MIGRATE_ON_STARTUP: 'false', RELEASE_ID: 'release-1', RELEASE_COMMIT_SHA: releaseCommitSha,
     }).checks).toContain('startup migrations disabled')
   })
 
