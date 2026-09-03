@@ -40,6 +40,14 @@ describe('PostgreSQL release policy', () => {
       now: '2026-09-03T00:02:00.000Z',
     }).reasons).toContain('production readiness evidence is stale')
   })
+  it('blocks future readiness evidence timestamps', () => {
+    expect(evaluatePostgresReleasePolicy({
+      ...productionRelease,
+      readinessCheckedAt: '2026-09-03T00:02:00.000Z',
+      maxReadinessAgeMs: 60_000,
+      now: '2026-09-03T00:00:00.000Z',
+    }).reasons).toContain('production readiness evidence timestamp is in the future')
+  })
   it('blocks invalid readiness freshness metadata', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReadinessAgeMs: 0 }).reasons).toContain('production readiness freshness threshold is invalid')
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: 'invalid' }).reasons).toContain('production readiness timestamp is invalid')

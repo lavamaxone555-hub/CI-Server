@@ -58,6 +58,7 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
     if (input.readinessCheckedAt !== undefined && input.maxReadinessAgeMs !== undefined) {
       const checkedAt = parseTimestamp(input.readinessCheckedAt)
       const now = parseTimestamp(input.now) ?? Date.now()
+      if (checkedAt !== undefined && now - checkedAt < 0) reasons.push('production readiness evidence timestamp is in the future')
       if (checkedAt !== undefined && now - checkedAt > input.maxReadinessAgeMs) reasons.push('production readiness evidence is stale')
     }
   }
