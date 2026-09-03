@@ -17,6 +17,7 @@ describe('PostgreSQL deployment preflight', () => {
         'production SSL enabled',
         'production migration explicitly approved',
       ],
+      failures: [],
     })
   })
 

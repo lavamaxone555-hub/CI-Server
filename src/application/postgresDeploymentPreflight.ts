@@ -3,6 +3,7 @@ import { loadPostgresDeploymentConfig } from './postgresDeploymentConfig'
 export interface PostgresDeploymentPreflight {
   ready: boolean
   checks: string[]
+  failures: string[]
 }
 
 export function verifyPostgresDeploymentPreflight(
@@ -10,12 +11,14 @@ export function verifyPostgresDeploymentPreflight(
 ): PostgresDeploymentPreflight {
   const config = loadPostgresDeploymentConfig(env)
   const checks = ['database configuration valid']
+  const failures: string[] = []
 
   if (config.environment === 'production') {
-    checks.push('production SSL enabled')
+    if (config.ssl) checks.push('production SSL enabled')
+    else failures.push('production SSL must be enabled')
     if (config.migrationOnStartup) checks.push('production migration explicitly approved')
     else checks.push('startup migrations disabled')
   }
 
-  return { ready: true, checks }
+  return { ready: failures.length === 0, checks, failures }
 }
