@@ -22,6 +22,9 @@ export function evaluatePostgresReleasePolicy(
   if (input.environment === 'production' && input.migrationsApplied < 1) {
     reasons.push('production release requires an established migration baseline')
   }
+  if (!Number.isInteger(input.expectedMigrationBaseline) && input.expectedMigrationBaseline !== undefined) {
+    reasons.push('production release expected migration baseline is invalid')
+  }
   if (
     input.environment === 'production'
     && input.expectedMigrationBaseline !== undefined

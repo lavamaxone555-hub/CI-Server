@@ -40,6 +40,16 @@ describe('PostgreSQL release policy', () => {
     })
   })
 
+  it('blocks invalid explicit expected migration baselines', () => {
+    expect(evaluatePostgresReleasePolicy({
+      ...productionRelease,
+      expectedMigrationBaseline: 1.5,
+    })).toEqual({
+      releasable: false,
+      reasons: ['production release expected migration baseline is invalid'],
+    })
+  })
+
   it('blocks production release when baseline verification explicitly fails', () => {
     expect(evaluatePostgresReleasePolicy({
       ...productionRelease,
