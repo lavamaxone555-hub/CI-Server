@@ -8,10 +8,14 @@ describe('PostgreSQL CI release evidence report', () => {
     evidenceReady: true,
     releaseApproved: true,
     migrationsApplied: 2,
+    expectedMigrationBaseline: 2,
+    releaseId: 'release-1',
+    createdAt: '2026-09-03T00:00:00.000Z',
+    releaseCommitSha: '84a95cf',
     checks: ['preflight passed'],
   }
 
-  it('creates a passed report for verified evidence', () => {
+  it('creates a complete passed report for verified production evidence', () => {
     expect(createPostgresCiReleaseEvidenceReport({
       verified: true,
       summary: 'postgres release evidence verified',
@@ -25,8 +29,22 @@ describe('PostgreSQL CI release evidence report', () => {
         'release approved',
         'migration baseline verified',
         'verification checks present',
+        'release identity verified',
+        'release timestamp verified',
+        'release commit identity verified',
+        'audited migration baseline verified',
       ],
     })
+  })
+
+  it('keeps non-production reports free of production-only claims', () => {
+    const testAudit = { ...audit, environment: 'test' as const, releaseCommitSha: undefined }
+    expect(createPostgresCiReleaseEvidenceReport({
+      verified: true,
+      summary: 'postgres release evidence verified',
+      failures: [],
+      audit: testAudit,
+    }).details).not.toContain('release commit identity verified')
   })
 
   it('preserves failed CI diagnostics in the report', () => {
