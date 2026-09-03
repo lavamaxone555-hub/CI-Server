@@ -29,6 +29,22 @@ describe('PostgreSQL release audit trail', () => {
     })
   })
 
+  it('normalizes immutable identity and verification check metadata', () => {
+    const audit = createPostgresReleaseAuditRecord({
+      environment: 'production',
+      evidenceReady: true,
+      releaseApproved: true,
+      migrationsApplied: 1,
+      releaseId: ' release-1 ',
+      releaseCommitSha: ' 84a95cf ',
+      checks: [' preflight passed ', ' readiness passed '],
+    })
+
+    expect(audit.releaseId).toBe('release-1')
+    expect(audit.releaseCommitSha).toBe('84a95cf')
+    expect(audit.checks).toEqual(['preflight passed', 'readiness passed'])
+  })
+
   it('freezes the audit record and its verification checks', () => {
     const audit = createPostgresReleaseAuditRecord({
       environment: 'production',

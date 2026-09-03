@@ -23,10 +23,16 @@ export interface PostgresReleaseAuditRecord {
   checks: readonly string[]
 }
 
+function normalizeChecks(checks: readonly string[]): readonly string[] {
+  return Object.freeze(checks.map((check) => check.trim()))
+}
+
 function freezeAuditRecord(record: PostgresReleaseAuditRecord): PostgresReleaseAuditRecord {
   return Object.freeze({
     ...record,
-    checks: Object.freeze([...record.checks]),
+    releaseId: record.releaseId?.trim(),
+    releaseCommitSha: record.releaseCommitSha?.trim(),
+    checks: normalizeChecks(record.checks),
   })
 }
 
@@ -41,6 +47,6 @@ export function createPostgresReleaseAuditRecord(input: PostgresReleaseAuditInpu
     migrationsApplied: input.migrationsApplied,
     ...(input.expectedMigrationBaseline === undefined ? {} : { expectedMigrationBaseline: input.expectedMigrationBaseline }),
     ...(input.releaseCommitSha === undefined ? {} : { releaseCommitSha: input.releaseCommitSha }),
-    checks: [...input.checks],
+    checks: input.checks,
   })
 }
