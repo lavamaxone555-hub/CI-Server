@@ -7,6 +7,7 @@ describe('PostgreSQL release policy', () => {
       environment: 'production',
       evidenceReady: true,
       migrationsApplied: 3,
+      migrationBaselineVerified: true,
     })).toEqual({ releasable: true, reasons: [] })
   })
 
@@ -41,6 +42,18 @@ describe('PostgreSQL release policy', () => {
     })).toEqual({
       releasable: false,
       reasons: ['production release migration baseline is below the expected level'],
+    })
+  })
+
+  it('blocks production release when baseline verification explicitly fails', () => {
+    expect(evaluatePostgresReleasePolicy({
+      environment: 'production',
+      evidenceReady: true,
+      migrationsApplied: 3,
+      migrationBaselineVerified: false,
+    })).toEqual({
+      releasable: false,
+      reasons: ['production release migration baseline verification failed'],
     })
   })
 })

@@ -3,6 +3,7 @@ export interface PostgresReleasePolicyInput {
   evidenceReady: boolean
   migrationsApplied: number
   expectedMigrationBaseline?: number
+  migrationBaselineVerified?: boolean
 }
 
 export interface PostgresReleasePolicy {
@@ -25,6 +26,9 @@ export function evaluatePostgresReleasePolicy(
     && input.migrationsApplied < input.expectedMigrationBaseline
   ) {
     reasons.push('production release migration baseline is below the expected level')
+  }
+  if (input.environment === 'production' && input.migrationBaselineVerified === false) {
+    reasons.push('production release migration baseline verification failed')
   }
 
   return { releasable: reasons.length === 0, reasons }
