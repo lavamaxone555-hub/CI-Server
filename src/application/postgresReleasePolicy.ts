@@ -9,6 +9,7 @@ export interface PostgresReleasePolicyInput {
   releaseCommitSha?: string
   verificationChecks?: readonly string[]
   deploymentPreflightReady?: boolean
+  deploymentVerificationReady?: boolean
 }
 
 export interface PostgresReleasePolicy {
@@ -25,6 +26,7 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
 
   if (!input.evidenceReady) reasons.push('deployment evidence is incomplete')
   if (input.environment === 'production' && input.deploymentPreflightReady === false) reasons.push('production deployment preflight failed')
+  if (input.environment === 'production' && input.deploymentVerificationReady === false) reasons.push('production deployment verification failed')
   if (input.environment === 'production' && input.migrationsApplied < 1) reasons.push('production release requires an established migration baseline')
   if (!Number.isInteger(input.expectedMigrationBaseline) && input.expectedMigrationBaseline !== undefined) reasons.push('production release expected migration baseline is invalid')
   if (input.environment === 'production' && input.expectedMigrationBaseline !== undefined && input.migrationsApplied < input.expectedMigrationBaseline) reasons.push('production release migration baseline is below the expected level')

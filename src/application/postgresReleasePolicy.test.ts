@@ -5,6 +5,7 @@ const productionRelease = {
   environment: 'production' as const,
   evidenceReady: true,
   deploymentPreflightReady: true,
+  deploymentVerificationReady: true,
   migrationsApplied: 3,
   migrationBaselineVerified: true,
   releaseId: 'release-1',
@@ -17,6 +18,7 @@ describe('PostgreSQL release policy', () => {
   it('allows a complete production release', () => expect(evaluatePostgresReleasePolicy(productionRelease)).toEqual({ releasable: true, reasons: [] }))
   it('blocks incomplete deployment evidence', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, evidenceReady: false }).releasable).toBe(false))
   it('blocks failed production deployment preflight', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, deploymentPreflightReady: false }).reasons).toContain('production deployment preflight failed'))
+  it('blocks failed production deployment verification', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, deploymentVerificationReady: false }).reasons).toContain('production deployment verification failed'))
   it('blocks missing production migration baseline', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, migrationsApplied: 0 }).reasons).toContain('production release requires an established migration baseline'))
   it('blocks invalid expected migration baseline', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, expectedMigrationBaseline: 1.5 }).releasable).toBe(false))
   it('blocks production releases below baseline', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, migrationsApplied: 2, expectedMigrationBaseline: 3 }).releasable).toBe(false))
