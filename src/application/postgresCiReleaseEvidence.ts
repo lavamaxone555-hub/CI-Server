@@ -15,6 +15,10 @@ export function verifyPostgresCiReleaseEvidence(
   if (!Number.isInteger(expectedMigrationBaseline) || expectedMigrationBaseline < 1) {
     failures.push('expected migration baseline is invalid')
   }
+  if (!audit.releaseId?.trim()) failures.push('release identity is missing')
+  if (!audit.createdAt || Number.isNaN(Date.parse(audit.createdAt))) {
+    failures.push('release timestamp is invalid')
+  }
   if (!audit.evidenceReady) failures.push('deployment evidence is incomplete')
   if (!audit.releaseApproved) failures.push('release approval is missing')
   if (audit.migrationsApplied < expectedMigrationBaseline) {
