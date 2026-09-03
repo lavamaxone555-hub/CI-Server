@@ -27,6 +27,9 @@ describe.runIf(url)('PostgreSQL CI release evidence integration', () => {
         evidenceReady: true,
         releaseApproved: true,
         migrationsApplied: migrations.length,
+        expectedMigrationBaseline: migrations.length,
+        releaseId: 'ci-live-release',
+        releaseCommitSha: process.env.GITHUB_SHA ?? '0000000',
         checks: ['live PostgreSQL reachable', 'live migration history readable'],
       })
 
