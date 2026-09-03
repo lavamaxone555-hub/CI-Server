@@ -23,6 +23,7 @@ export interface PostgresStartupResult {
   releaseAuditEvent: string
   releaseId: string
   releaseTimestamp: string
+  expectedMigrationBaseline: number
 }
 
 export async function startPostgresInfrastructure(
@@ -30,62 +31,42 @@ export async function startPostgresInfrastructure(
 ): Promise<PostgresStartupResult> {
   const preflight = verifyPostgresDeploymentPreflight(env)
   if (!preflight.ready) throw new Error('database deployment preflight failed')
-
   const config = loadPostgresDeploymentConfig(env)
   const migrations = config.migrationOnStartup ? await initializePostgresDatabase(env) : []
   const pool = createPostgresPool(env)
   try {
     const verification = await verifyPostgresDeployment(pool)
     if (!verification.ready) throw new Error(verification.readiness.reason ?? 'database deployment verification failed')
-
     const recovery = await verifyPostgresRecoveryReadiness(pool)
     if (!recovery.ready) throw new Error(recovery.readiness.reason ?? 'database recovery verification failed')
-
     const postRestore = await verifyPostgresPostRestore(pool, verification.migrationsApplied)
     if (!postRestore.ready) throw new Error(postRestore.readiness.reason ?? 'database post-restore verification failed')
-
     const evidence = createPostgresDeploymentEvidence({
       migrationsApplied: verification.migrationsApplied,
-      preflightChecks: preflight.checks,
-      recoveryChecks: recovery.checks,
-      postRestoreChecks: postRestore.checks,
+      preflightChecks: preflight.checks, recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks,
     })
     if (!evidence.ready) throw new Error('database release evidence is incomplete')
-
     const releaseTimestamp = new Date().toISOString()
     const policy = evaluatePostgresReleasePolicy({
-      environment: config.environment,
-      evidenceReady: evidence.ready,
+      environment: config.environment, evidenceReady: evidence.ready,
       migrationsApplied: verification.migrationsApplied,
-      migrationBaselineVerified: verification.migrationsApplied > 0,
-      releaseId: config.releaseId,
-      releaseTimestamp,
+      expectedMigrationBaseline: config.expectedMigrationBaseline,
+      migrationBaselineVerified: verification.migrationsApplied >= config.expectedMigrationBaseline,
+      releaseId: config.releaseId, releaseTimestamp,
     })
     if (!policy.releasable) throw new Error(policy.reasons.join('; '))
-
     const audit = createPostgresReleaseAuditRecord({
-      environment: config.environment,
-      evidenceReady: evidence.ready,
-      releaseApproved: policy.releasable,
-      migrationsApplied: verification.migrationsApplied,
-      checks: evidence.checks,
-      releaseId: config.releaseId,
-      createdAt: releaseTimestamp,
+      environment: config.environment, evidenceReady: evidence.ready, releaseApproved: policy.releasable,
+      migrationsApplied: verification.migrationsApplied, checks: evidence.checks,
+      releaseId: config.releaseId, createdAt: releaseTimestamp,
     })
-    assertPostgresCiReleaseEvidence(audit)
-
+    assertPostgresCiReleaseEvidence(audit, config.expectedMigrationBaseline)
     return {
-      migrations,
-      readiness: verification.readiness,
-      migrationsApplied: verification.migrationsApplied,
-      preflightChecks: preflight.checks,
-      recoveryChecks: recovery.checks,
-      postRestoreChecks: postRestore.checks,
-      releaseEvidenceReady: evidence.ready,
-      releaseApproved: policy.releasable,
-      releaseAuditEvent: audit.event,
-      releaseId: config.releaseId,
-      releaseTimestamp,
+      migrations, readiness: verification.readiness, migrationsApplied: verification.migrationsApplied,
+      preflightChecks: preflight.checks, recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks,
+      releaseEvidenceReady: evidence.ready, releaseApproved: policy.releasable,
+      releaseAuditEvent: audit.event, releaseId: config.releaseId, releaseTimestamp,
+      expectedMigrationBaseline: config.expectedMigrationBaseline,
     }
   } finally {
     await pool.end()

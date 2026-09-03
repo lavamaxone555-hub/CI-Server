@@ -4,6 +4,7 @@ export interface PostgresDeploymentConfig extends DatabaseConfig {
   environment: 'development' | 'test' | 'production'
   migrationOnStartup: boolean
   releaseId: string
+  expectedMigrationBaseline: number
 }
 
 export function loadPostgresDeploymentConfig(
@@ -25,5 +26,10 @@ export function loadPostgresDeploymentConfig(
   if (environment === 'production' && releaseId === 'local') {
     throw new Error('RELEASE_ID is required in production')
   }
-  return { ...database, environment, migrationOnStartup, releaseId }
+  const rawBaseline = env.DATABASE_EXPECTED_MIGRATION_BASELINE
+  const expectedMigrationBaseline = rawBaseline === undefined ? 1 : Number(rawBaseline)
+  if (!Number.isInteger(expectedMigrationBaseline) || expectedMigrationBaseline < 1) {
+    throw new Error('DATABASE_EXPECTED_MIGRATION_BASELINE must be a positive integer')
+  }
+  return { ...database, environment, migrationOnStartup, releaseId, expectedMigrationBaseline }
 }
