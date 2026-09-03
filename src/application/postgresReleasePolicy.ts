@@ -7,6 +7,7 @@ export interface PostgresReleasePolicyInput {
   releaseId?: string
   releaseTimestamp?: string
   releaseCommitSha?: string
+  verificationChecks?: readonly string[]
 }
 
 export interface PostgresReleasePolicy {
@@ -22,29 +23,14 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
   const reasons: string[] = []
 
   if (!input.evidenceReady) reasons.push('deployment evidence is incomplete')
-  if (input.environment === 'production' && input.migrationsApplied < 1) {
-    reasons.push('production release requires an established migration baseline')
-  }
-  if (!Number.isInteger(input.expectedMigrationBaseline) && input.expectedMigrationBaseline !== undefined) {
-    reasons.push('production release expected migration baseline is invalid')
-  }
-  if (input.environment === 'production' && input.expectedMigrationBaseline !== undefined
-    && input.migrationsApplied < input.expectedMigrationBaseline) {
-    reasons.push('production release migration baseline is below the expected level')
-  }
-  if (input.environment === 'production' && input.migrationBaselineVerified === false) {
-    reasons.push('production release migration baseline verification failed')
-  }
-  if (input.environment === 'production' && !input.releaseId?.trim()) {
-    reasons.push('production release identity is missing')
-  }
-  if (input.environment === 'production'
-    && (!input.releaseTimestamp || Number.isNaN(Date.parse(input.releaseTimestamp)))) {
-    reasons.push('production release timestamp is invalid')
-  }
-  if (input.environment === 'production' && !isCommitSha(input.releaseCommitSha)) {
-    reasons.push('production release commit identity is invalid')
-  }
+  if (input.environment === 'production' && input.migrationsApplied < 1) reasons.push('production release requires an established migration baseline')
+  if (!Number.isInteger(input.expectedMigrationBaseline) && input.expectedMigrationBaseline !== undefined) reasons.push('production release expected migration baseline is invalid')
+  if (input.environment === 'production' && input.expectedMigrationBaseline !== undefined && input.migrationsApplied < input.expectedMigrationBaseline) reasons.push('production release migration baseline is below the expected level')
+  if (input.environment === 'production' && input.migrationBaselineVerified === false) reasons.push('production release migration baseline verification failed')
+  if (input.environment === 'production' && !input.releaseId?.trim()) reasons.push('production release identity is missing')
+  if (input.environment === 'production' && (!input.releaseTimestamp || Number.isNaN(Date.parse(input.releaseTimestamp)))) reasons.push('production release timestamp is invalid')
+  if (input.environment === 'production' && !isCommitSha(input.releaseCommitSha)) reasons.push('production release commit identity is invalid')
+  if (input.environment === 'production' && input.verificationChecks !== undefined && input.verificationChecks.length < 1) reasons.push('production release verification checks are missing')
 
   return { releasable: reasons.length === 0, reasons }
 }
