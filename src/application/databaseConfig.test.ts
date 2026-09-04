@@ -7,6 +7,18 @@ describe('database configuration', () => {
       .toEqual({ connectionString: 'postgres://localhost/retail', ssl: true })
   })
 
+  it('canonicalizes DATABASE_URL and DATABASE_SSL configuration', () => {
+    expect(loadDatabaseConfig({ DATABASE_URL: '  POSTGRES://localhost/retail  ', DATABASE_SSL: '  TRUE  ' }))
+      .toEqual({ connectionString: 'POSTGRES://localhost/retail', ssl: true })
+  })
+
+  it('rejects malformed or empty DATABASE_SSL configuration', () => {
+    expect(() => loadDatabaseConfig({ DATABASE_URL: 'postgres://localhost/retail', DATABASE_SSL: 'yes' }))
+      .toThrow('DATABASE_SSL must be true or false')
+    expect(() => loadDatabaseConfig({ DATABASE_URL: 'postgres://localhost/retail', DATABASE_SSL: '   ' }))
+      .toThrow('DATABASE_SSL must not be empty')
+  })
+
   it('fails fast without DATABASE_URL', () => {
     expect(() => loadDatabaseConfig({})).toThrow('DATABASE_URL is required')
   })
