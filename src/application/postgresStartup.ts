@@ -81,6 +81,7 @@ export async function startPostgresInfrastructure(
     return {
       migrations, readiness: verification.readiness, migrationsApplied: verification.migrationsApplied,
       preflightChecks: preflight.checks, recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks,
+      rollbackChecks: rollback.checks,
       releaseEvidenceReady: evidence.ready, releaseApproved: policy.releasable,
       releaseAuditEvent: audit.event, releaseId: config.releaseId, releaseTimestamp,
       expectedMigrationBaseline: config.expectedMigrationBaseline, releaseCommitSha,
