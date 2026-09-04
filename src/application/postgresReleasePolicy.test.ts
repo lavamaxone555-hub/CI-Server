@@ -32,6 +32,11 @@ describe('PostgreSQL release policy', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseId: 'release\n1' }).reasons).toContain('production release identity contains control characters')
   })
   it('blocks invalid release timestamp', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseTimestamp: 'invalid' }).releasable).toBe(false))
+  it('blocks stale or future production release evidence', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReleaseAgeMs: 60_000, now: '2026-09-03T00:02:00.000Z' }).reasons).toContain('production release evidence is stale')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReleaseAgeMs: 60_000, now: '2026-09-02T23:59:00.000Z' }).reasons).toContain('production release timestamp is in the future')
+  })
+  it('blocks invalid production release freshness threshold', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReleaseAgeMs: 0 }).reasons).toContain('production release freshness threshold is invalid'))
   it('blocks malformed production commit identity', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitSha: 'release-1' }).releasable).toBe(false))
   it('blocks empty or unsafe production verification checks', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, verificationChecks: [] }).reasons).toContain('production release verification checks are missing')

@@ -15,6 +15,7 @@ export interface PostgresReleasePolicyInput {
   readinessCheckedAt?: string
   maxReadinessAgeMs?: number
   now?: string
+  maxReleaseAgeMs?: number
 }
 
 export interface PostgresReleasePolicy {
@@ -49,6 +50,13 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
   if (input.environment === 'production' && !input.releaseId?.trim()) reasons.push('production release identity is missing')
   if (input.environment === 'production' && input.releaseId !== undefined && hasControlCharacters(input.releaseId)) reasons.push('production release identity contains control characters')
   if (input.environment === 'production' && (!input.releaseTimestamp || Number.isNaN(Date.parse(input.releaseTimestamp)))) reasons.push('production release timestamp is invalid')
+  if (input.environment === 'production' && input.maxReleaseAgeMs !== undefined && (!Number.isFinite(input.maxReleaseAgeMs) || input.maxReleaseAgeMs <= 0)) reasons.push('production release freshness threshold is invalid')
+  if (input.environment === 'production' && input.releaseTimestamp !== undefined && input.maxReleaseAgeMs !== undefined) {
+    const releaseTimestamp = parseTimestamp(input.releaseTimestamp)
+    const now = parseTimestamp(input.now) ?? Date.now()
+    if (releaseTimestamp !== undefined && now - releaseTimestamp < 0) reasons.push('production release timestamp is in the future')
+    if (releaseTimestamp !== undefined && now - releaseTimestamp > input.maxReleaseAgeMs) reasons.push('production release evidence is stale')
+  }
   if (input.environment === 'production' && !isCommitSha(input.releaseCommitSha)) reasons.push('production release commit identity is invalid')
 
   if (input.environment === 'production' && input.verificationChecks !== undefined) {
