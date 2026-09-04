@@ -19,6 +19,13 @@ describe('migration history', () => {
     )).toThrow('migration checksum mismatch: 001.sql')
   })
 
+  it('rejects non-canonical or control-character migration names', () => {
+    expect(() => pendingMigrations([{ name: ' 001.sql', checksum: 'a', sql: 'SELECT 1' }], []))
+      .toThrow('unsafe migration name:  001.sql')
+    expect(() => pendingMigrations([{ name: '001.sql\n', checksum: 'a', sql: 'SELECT 1' }], []))
+      .toThrow('unsafe migration name: 001.sql\n')
+  })
+
   it('rejects unsafe migration names before planning execution', () => {
     expect(() => pendingMigrations(
       [{ name: '../escape.sql', checksum: 'a', sql: 'SELECT 1' }],

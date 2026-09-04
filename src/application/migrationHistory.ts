@@ -8,7 +8,7 @@ export interface PlannedMigration extends AppliedMigration {
 }
 
 function assertSafeMigrationName(name: string): void {
-  if (!name || name.startsWith('/') || name.includes('\\') || name.split('/').includes('..')) {
+  if (name.normalize('NFC').trim() !== name || /[\u0000-\u001f\u007f]/.test(name) || !name || name.startsWith('/') || name.includes('\\') || name.split('/').includes('..')) {
     throw new Error(`unsafe migration name: ${name}`)
   }
 }
