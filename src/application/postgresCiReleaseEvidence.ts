@@ -82,7 +82,9 @@ export function verifyPostgresCiReleaseEvidence(
     const parsedTimestamp = new Date(auditTimestamp)
     if (audit.createdAt !== auditTimestamp) failures.push('release timestamp is not canonical')
     const now = nowMs
-    if (parsedTimestamp.getTime() > now + 5 * 60 * 1000) failures.push('release timestamp is too far in the future')
+    const futureSkewMs = 5 * 60 * 1000
+    const timestampMs = parsedTimestamp.getTime()
+    if (timestampMs > now && timestampMs - now > futureSkewMs) failures.push('release timestamp is too far in the future')
     if (expectedRelease?.maxEvidenceAgeMs !== undefined) {
       if (!Number.isSafeInteger(expectedRelease.maxEvidenceAgeMs) || expectedRelease.maxEvidenceAgeMs < 0 || expectedRelease.maxEvidenceAgeMs > 365 * 24 * 60 * 60 * 1000) failures.push('release evidence freshness window is invalid')
       else if (now - parsedTimestamp.getTime() > expectedRelease.maxEvidenceAgeMs) failures.push('release evidence is stale')
