@@ -100,6 +100,8 @@ describe('PostgreSQL CI release evidence', () => {
       .toContain('verification clock is invalid')
     expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1' }, -1).failures)
       .toContain('verification clock is invalid')
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1' }, Number.MAX_SAFE_INTEGER + 1).failures)
+      .toContain('verification clock is invalid')
   })
 
   it('evaluates evidence freshness against an injected deterministic clock', () => {

@@ -57,7 +57,7 @@ export function verifyPostgresCiReleaseEvidence(
   nowMs = Date.now(),
 ): PostgresCiReleaseEvidence {
   const failures: string[] = []
-  if (!Number.isFinite(nowMs) || !Number.isInteger(nowMs) || nowMs < 0) failures.push('verification clock is invalid')
+  if (!Number.isSafeInteger(nowMs) || nowMs < 0) failures.push('verification clock is invalid')
   const baseline = expectedMigrationBaseline ?? audit.expectedMigrationBaseline ?? 1
   if (!Number.isInteger(baseline) || baseline < 1) failures.push('expected migration baseline is invalid')
   if (expectedMigrationBaseline !== undefined && audit.expectedMigrationBaseline !== undefined
