@@ -49,6 +49,12 @@ describe('PostgreSQL CI release evidence', () => {
       .toContain('release evidence fingerprint does not match expected evidence')
   })
 
+  it('canonicalizes audit and expected release identities consistently', () => {
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, releaseId: '  release-1  ' }, 3, { releaseId: 'release-1' })).toMatchObject({ verified: true })
+    expect(createPostgresReleaseEvidenceFingerprint({ ...audit, releaseId: '  release-1  ' }))
+      .toBe(createPostgresReleaseEvidenceFingerprint(audit))
+  })
+
   it('canonicalizes expected release identity before binding evidence', () => {
     expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: '  release-1  ' })).toMatchObject({ verified: true })
   })
