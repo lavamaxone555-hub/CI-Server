@@ -21,6 +21,16 @@ describe('Database checkout adapter', () => {
     expect(calls).toEqual(['begin', 'sale', 'movement', 'payment', 'imei', 'commit'])
   })
 
+  it('does not attempt rollback when begin fails', () => {
+    const calls: string[] = []
+    const session: DatabaseCheckoutSession = {
+      begin: () => { calls.push('begin'); throw new Error('begin failed') }, commit: () => calls.push('commit'), rollback: () => calls.push('rollback'),
+      insertSale: (x) => x, insertInventoryMovement: (x) => x, insertPayment: (x) => x, updateImei: (x) => x,
+    }
+    expect(() => persistCheckout(session, { sale, movements: [], payments: [], imeiUnits: [] })).toThrow('begin failed')
+    expect(calls).toEqual(['begin'])
+  })
+
   it('rolls back when any persistence operation fails', () => {
     const calls: string[] = []
     const session: DatabaseCheckoutSession = {
