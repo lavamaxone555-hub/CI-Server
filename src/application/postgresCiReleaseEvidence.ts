@@ -20,6 +20,10 @@ function canonicalizeEvidenceCheck(check: string): string {
   return check.normalize('NFC').trim()
 }
 
+function canonicalizeReleaseId(value: string): string {
+  return value.normalize('NFC').trim()
+}
+
 export function createPostgresReleaseEvidenceFingerprint(audit: PostgresReleaseAuditRecord): string {
   const payload = JSON.stringify({
     releaseId: audit.releaseId ?? '',
@@ -50,9 +54,12 @@ export function verifyPostgresCiReleaseEvidence(
     && expectedMigrationBaseline !== audit.expectedMigrationBaseline) failures.push('release evidence baseline does not match audit baseline')
   if (!audit.releaseId?.trim()) failures.push('release identity is missing')
   else if (hasControlCharacters(audit.releaseId)) failures.push('release identity contains control characters')
-  if (expectedRelease && !expectedRelease.releaseId.trim()) failures.push('expected release identity is invalid')
-  else if (expectedRelease && hasControlCharacters(expectedRelease.releaseId)) failures.push('expected release identity contains control characters')
-  else if (expectedRelease && audit.releaseId !== expectedRelease.releaseId) failures.push('release evidence identity does not match expected release')
+  if (expectedRelease) {
+    const expectedReleaseId = canonicalizeReleaseId(expectedRelease.releaseId)
+    if (!expectedReleaseId) failures.push('expected release identity is invalid')
+    else if (hasControlCharacters(expectedReleaseId)) failures.push('expected release identity contains control characters')
+    else if (audit.releaseId !== expectedReleaseId) failures.push('release evidence identity does not match expected release')
+  }
   const evidenceFingerprint = createPostgresReleaseEvidenceFingerprint(audit)
   if (expectedRelease?.evidenceFingerprint !== undefined) {
     if (!/^[0-9a-f]{64}$/i.test(expectedRelease.evidenceFingerprint)) failures.push('release evidence fingerprint is invalid')
