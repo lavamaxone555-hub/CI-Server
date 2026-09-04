@@ -34,7 +34,10 @@ export async function listMigrations(directory: string): Promise<string[]> {
 export async function loadMigrationSources(directory: string): Promise<PlannedMigration[]> {
   const files = await listMigrations(directory)
   return Promise.all(files.map(async (name) => {
-    const sql = await readFile(join(directory, name), 'utf8')
+    const path = join(directory, name)
+    const metadata = await lstat(path)
+    if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error(`migration entry changed after validation: ${name}`)
+    const sql = await readFile(path, 'utf8')
     return { name, sql, checksum: checksumMigration(sql) }
   }))
 }
@@ -45,7 +48,12 @@ export function checksumMigration(sql: string): string {
 
 export async function runMigrations(executor: MigrationExecutor, directory: string): Promise<string[]> {
   const files = await listMigrations(directory)
-  for (const file of files) await executor.execute(await readFile(join(directory, file), 'utf8'))
+  for (const file of files) {
+    const path = join(directory, file)
+    const metadata = await lstat(path)
+    if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error(`migration entry changed after validation: ${file}`)
+    await executor.execute(await readFile(path, 'utf8'))
+  }
   return files
 }
 
@@ -57,7 +65,12 @@ export async function runMigrationsTransactionally(
   await executor.begin()
   let migrationsCompleted = false
   try {
-    for (const file of files) await executor.execute(await readFile(join(directory, file), 'utf8'))
+    for (const file of files) {
+      const path = join(directory, file)
+      const metadata = await lstat(path)
+      if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error(`migration entry changed after validation: ${file}`)
+      await executor.execute(await readFile(path, 'utf8'))
+    }
     migrationsCompleted = true
     await executor.commit()
     return files
