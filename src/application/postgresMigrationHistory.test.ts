@@ -128,6 +128,14 @@ describe('PostgreSQL migration history', () => {
       .rejects.toBe(original)
   })
 
+  it('rejects expected migration baselines that are not strictly ordered', async () => {
+    const pool = { query: async () => ({ rows: [{ name: '001.sql', checksum: 'a' }, { name: '002.sql', checksum: 'b' }] }), end: async () => {} }
+    await expect(verifyPostgresMigrationHistory(pool, [
+      { name: '002.sql', checksum: 'b' },
+      { name: '001.sql', checksum: 'a' },
+    ])).rejects.toThrow('expected migration baseline is not strictly ordered: 001.sql')
+  })
+
   it('rejects invalid migration records before persistence', async () => {
     const pool = { query: async () => ({ rows: [] }), end: async () => {} }
     await expect(recordAppliedPostgresMigration(pool, { name: '001.sql', checksum: '' }))

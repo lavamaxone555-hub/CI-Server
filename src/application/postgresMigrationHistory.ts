@@ -66,7 +66,12 @@ export async function verifyPostgresMigrationHistory(
 ): Promise<void> {
   for (const migration of expected) assertValidAppliedMigration(migration)
   const expectedByName = new Map<string, string>()
+  let previousExpectedName: string | undefined
   for (const migration of expected) {
+    if (previousExpectedName !== undefined && migration.name <= previousExpectedName) {
+      throw new Error(`expected migration baseline is not strictly ordered: ${migration.name}`)
+    }
+    previousExpectedName = migration.name
     const previousChecksum = expectedByName.get(migration.name)
     if (previousChecksum !== undefined && previousChecksum !== migration.checksum) {
       throw new Error(`duplicate expected migration checksum mismatch: ${migration.name}`)
