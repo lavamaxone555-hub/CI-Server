@@ -24,10 +24,14 @@ function canonicalizeReleaseId(value: string): string {
   return value.normalize('NFC').trim()
 }
 
+function canonicalizeCommitSha(value: string): string {
+  return value.normalize('NFC').trim().toLowerCase()
+}
+
 export function createPostgresReleaseEvidenceFingerprint(audit: PostgresReleaseAuditRecord): string {
   const payload = JSON.stringify({
     releaseId: audit.releaseId === undefined ? '' : canonicalizeReleaseId(audit.releaseId),
-    releaseCommitSha: audit.releaseCommitSha ?? '',
+    releaseCommitSha: audit.releaseCommitSha === undefined ? '' : canonicalizeCommitSha(audit.releaseCommitSha),
     createdAt: audit.createdAt ?? '',
     migrationsApplied: audit.migrationsApplied,
     checks: audit.checks.map(canonicalizeEvidenceCheck).sort(),
@@ -77,10 +81,12 @@ export function verifyPostgresCiReleaseEvidence(
       else if (now - parsedTimestamp.getTime() > expectedRelease.maxEvidenceAgeMs) failures.push('release evidence is stale')
     }
   }
-  if (audit.environment === 'production' && !isCommitSha(audit.releaseCommitSha)) failures.push('release commit identity is invalid')
+  const auditCommitSha = audit.releaseCommitSha === undefined ? undefined : canonicalizeCommitSha(audit.releaseCommitSha)
+  if (audit.environment === 'production' && !isCommitSha(auditCommitSha)) failures.push('release commit identity is invalid')
   if (expectedRelease?.releaseCommitSha !== undefined) {
-    if (!isCommitSha(expectedRelease.releaseCommitSha)) failures.push('expected release commit identity is invalid')
-    else if (audit.releaseCommitSha !== expectedRelease.releaseCommitSha) failures.push('release evidence commit does not match expected release')
+    const expectedCommitSha = canonicalizeCommitSha(expectedRelease.releaseCommitSha)
+    if (!isCommitSha(expectedCommitSha)) failures.push('expected release commit identity is invalid')
+    else if (auditCommitSha !== expectedCommitSha) failures.push('release evidence commit does not match expected release')
   }
   if (!Number.isInteger(audit.migrationsApplied) || audit.migrationsApplied < 0) failures.push('applied migration count is invalid')
   if (!audit.evidenceReady) failures.push('deployment evidence is incomplete')

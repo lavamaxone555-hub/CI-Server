@@ -49,6 +49,12 @@ describe('PostgreSQL CI release evidence', () => {
       .toContain('release evidence fingerprint does not match expected evidence')
   })
 
+  it('canonicalizes audit and expected commit identities consistently', () => {
+    const spacedUppercase = { ...audit, releaseCommitSha: '  84A95CF  ' }
+    expect(verifyPostgresCiReleaseEvidence(spacedUppercase, 3, { releaseId: 'release-1', releaseCommitSha: '84a95cf' })).toMatchObject({ verified: true })
+    expect(createPostgresReleaseEvidenceFingerprint(spacedUppercase)).toBe(createPostgresReleaseEvidenceFingerprint(audit))
+  })
+
   it('canonicalizes audit and expected release identities consistently', () => {
     expect(verifyPostgresCiReleaseEvidence({ ...audit, releaseId: '  release-1  ' }, 3, { releaseId: 'release-1' })).toMatchObject({ verified: true })
     expect(createPostgresReleaseEvidenceFingerprint({ ...audit, releaseId: '  release-1  ' }))
