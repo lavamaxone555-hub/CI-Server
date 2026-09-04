@@ -55,7 +55,7 @@ describe('migration runner', () => {
     const calls: string[] = []
     await expect(runMigrationsTransactionally({
       begin: async () => { calls.push('BEGIN'); throw new Error('begin failed') }, execute: async () => {},
-      commit: async () => calls.push('COMMIT'), rollback: async () => calls.push('ROLLBACK'),
+      commit: async () => { calls.push('COMMIT') }, rollback: async () => { calls.push('ROLLBACK') },
     }, directory)).rejects.toThrow('begin failed')
     expect(calls).toEqual(['BEGIN'])
   })
