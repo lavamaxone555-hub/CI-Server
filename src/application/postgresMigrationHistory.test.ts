@@ -109,6 +109,25 @@ describe('PostgreSQL migration history', () => {
     ])).rejects.toThrow('duplicate expected migration checksum mismatch: 001.sql')
   })
 
+  it('translates duplicate migration persistence errors into a deterministic failure', async () => {
+    const pool = {
+      query: async () => { throw { code: '23505' } },
+      end: async () => {},
+    }
+    await expect(recordAppliedPostgresMigration(pool, { name: '001.sql', checksum: 'abc' }))
+      .rejects.toThrow('migration already recorded: 001.sql')
+  })
+
+  it('preserves non-duplicate persistence failures', async () => {
+    const original = new Error('database unavailable')
+    const pool = {
+      query: async () => { throw original },
+      end: async () => {},
+    }
+    await expect(recordAppliedPostgresMigration(pool, { name: '001.sql', checksum: 'abc' }))
+      .rejects.toBe(original)
+  })
+
   it('rejects invalid migration records before persistence', async () => {
     const pool = { query: async () => ({ rows: [] }), end: async () => {} }
     await expect(recordAppliedPostgresMigration(pool, { name: '001.sql', checksum: '' }))

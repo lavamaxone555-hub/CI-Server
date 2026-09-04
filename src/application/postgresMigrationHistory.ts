@@ -48,10 +48,16 @@ export async function recordAppliedPostgresMigration(
   migration: AppliedMigration,
 ): Promise<void> {
   assertValidAppliedMigration(migration)
-  await pool.query(
-    'INSERT INTO schema_migrations (name, checksum) VALUES ($1, $2)',
-    [migration.name, migration.checksum],
-  )
+  try {
+    await pool.query(
+      'INSERT INTO schema_migrations (name, checksum) VALUES ($1, $2)',
+      [migration.name, migration.checksum],
+    )
+  } catch (error) {
+    const code = typeof error === 'object' && error !== null && 'code' in error ? (error as { code?: unknown }).code : undefined
+    if (code === '23505') throw new Error(`migration already recorded: ${migration.name}`)
+    throw error
+  }
 }
 
 export async function verifyPostgresMigrationHistory(
