@@ -17,7 +17,15 @@ export function pendingMigrations(
   planned: readonly PlannedMigration[],
   applied: readonly AppliedMigration[],
 ): PlannedMigration[] {
-  const appliedByName = new Map(applied.map((migration) => [migration.name, migration.checksum]))
+  const appliedByName = new Map<string, string>()
+  for (const migration of applied) {
+    assertSafeMigrationName(migration.name)
+    const previousChecksum = appliedByName.get(migration.name)
+    if (previousChecksum !== undefined && previousChecksum !== migration.checksum) {
+      throw new Error(`duplicate applied migration checksum mismatch: ${migration.name}`)
+    }
+    appliedByName.set(migration.name, migration.checksum)
+  }
   for (const migration of planned) {
     assertSafeMigrationName(migration.name)
     const checksum = appliedByName.get(migration.name)

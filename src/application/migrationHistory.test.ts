@@ -12,6 +12,13 @@ describe('migration history', () => {
     )).toEqual([{ name: '002.sql', checksum: 'b', sql: 'SECOND' }])
   })
 
+  it('rejects conflicting duplicate applied migration history', () => {
+    expect(() => pendingMigrations(
+      [],
+      [{ name: '001.sql', checksum: 'a' }, { name: '001.sql', checksum: 'b' }],
+    )).toThrow('duplicate applied migration checksum mismatch: 001.sql')
+  })
+
   it('rejects migration drift', () => {
     expect(() => pendingMigrations(
       [{ name: '001.sql', checksum: 'new', sql: 'NEW' }],
