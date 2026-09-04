@@ -3,6 +3,7 @@ export interface PostgresDeploymentEvidenceInput {
   preflightChecks: readonly string[]
   recoveryChecks: readonly string[]
   postRestoreChecks: readonly string[]
+  rollbackChecks: readonly string[]
 }
 
 export interface PostgresDeploymentEvidence {
@@ -29,12 +30,14 @@ export function createPostgresDeploymentEvidence(
   const preflightChecks = normalizeChecks(input.preflightChecks)
   const recoveryChecks = normalizeChecks(input.recoveryChecks)
   const postRestoreChecks = normalizeChecks(input.postRestoreChecks)
-  const checks = [...preflightChecks, ...recoveryChecks, ...postRestoreChecks]
+  const rollbackChecks = normalizeChecks(input.rollbackChecks)
+  const checks = [...preflightChecks, ...recoveryChecks, ...postRestoreChecks, ...rollbackChecks]
   const validMigrations = Number.isInteger(input.migrationsApplied) && input.migrationsApplied > 0
   const ready = validMigrations
     && hasValidChecks(preflightChecks)
     && hasValidChecks(recoveryChecks)
     && hasValidChecks(postRestoreChecks)
+    && hasValidChecks(rollbackChecks)
 
   return {
     ready,

@@ -8,6 +8,7 @@ describe('PostgreSQL deployment evidence', () => {
       preflightChecks: ['database configuration valid'],
       recoveryChecks: ['migration history readable'],
       postRestoreChecks: ['migration history meets recovery baseline'],
+      rollbackChecks: ['rollback procedure verified'],
     })).toEqual({
       ready: true,
       migrationsApplied: 2,
@@ -15,6 +16,7 @@ describe('PostgreSQL deployment evidence', () => {
         'database configuration valid',
         'migration history readable',
         'migration history meets recovery baseline',
+        'rollback procedure verified',
       ],
     })
   })
@@ -25,6 +27,7 @@ describe('PostgreSQL deployment evidence', () => {
       preflightChecks: ['database configuration valid'],
       recoveryChecks: [],
       postRestoreChecks: ['migration history meets recovery baseline'],
+      rollbackChecks: ['rollback procedure verified'],
     }).ready).toBe(false)
   })
 
@@ -34,6 +37,7 @@ describe('PostgreSQL deployment evidence', () => {
       preflightChecks: ['preflight'],
       recoveryChecks: ['recovery'],
       postRestoreChecks: ['post-restore'],
+      rollbackChecks: ['rollback procedure verified'],
     }).ready).toBe(false)
   })
 
@@ -43,6 +47,7 @@ describe('PostgreSQL deployment evidence', () => {
       preflightChecks: ['  '],
       recoveryChecks: ['recovery'],
       postRestoreChecks: ['post-restore'],
+      rollbackChecks: ['rollback procedure verified'],
     }).ready).toBe(false)
 
     expect(createPostgresDeploymentEvidence({
@@ -50,6 +55,7 @@ describe('PostgreSQL deployment evidence', () => {
       preflightChecks: ['preflight\nforged'],
       recoveryChecks: ['recovery'],
       postRestoreChecks: ['post-restore'],
+      rollbackChecks: ['rollback procedure verified'],
     }).ready).toBe(false)
   })
 
@@ -59,6 +65,7 @@ describe('PostgreSQL deployment evidence', () => {
       preflightChecks: ['  preflight  '],
       recoveryChecks: [' recovery '],
       postRestoreChecks: [' post-restore '],
-    }).checks).toEqual(['preflight', 'recovery', 'post-restore'])
+      rollbackChecks: [' rollback verified '],
+    }).checks).toEqual(['preflight', 'recovery', 'post-restore', 'rollback verified'])
   })
 })

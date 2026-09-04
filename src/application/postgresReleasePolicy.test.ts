@@ -8,6 +8,7 @@ const productionRelease = {
   deploymentVerificationReady: true,
   migrationsApplied: 3,
   migrationBaselineVerified: true,
+  rollbackReady: true,
   releaseId: 'release-1',
   releaseTimestamp: '2026-09-03T00:00:00.000Z',
   releaseCommitSha: '84a95cf',
@@ -27,6 +28,7 @@ describe('PostgreSQL release policy', () => {
   it('blocks invalid expected migration baseline', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, expectedMigrationBaseline: 1.5 }).releasable).toBe(false))
   it('blocks production releases below baseline', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, migrationsApplied: 2, expectedMigrationBaseline: 3 }).releasable).toBe(false))
   it('blocks explicit baseline verification failure', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, migrationBaselineVerified: false }).releasable).toBe(false))
+  it('blocks production releases without explicit rollback readiness', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, rollbackReady: false }).reasons).toContain('production rollback readiness is missing'))
   it('blocks missing or unsafe release identity', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseId: ' ' }).releasable).toBe(false)
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseId: 'release\n1' }).reasons).toContain('production release identity contains control characters')

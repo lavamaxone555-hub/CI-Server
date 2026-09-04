@@ -9,6 +9,7 @@ import { verifyPostgresDeployment } from './postgresDeploymentVerification'
 import { verifyPostgresDeploymentPreflight } from './postgresDeploymentPreflight'
 import { verifyPostgresRecoveryReadiness } from './postgresRecoveryReadiness'
 import { verifyPostgresPostRestore } from './postgresPostRestoreVerification'
+import { verifyPostgresRollbackReadiness } from './postgresRollbackReadiness'
 import { createPostgresDeploymentEvidence } from './postgresDeploymentEvidence'
 import { evaluatePostgresReleasePolicy } from './postgresReleasePolicy'
 import { createPostgresReleaseAuditRecord } from './postgresReleaseAuditTrail'
@@ -21,6 +22,7 @@ export interface PostgresStartupResult {
   preflightChecks: string[]
   recoveryChecks: string[]
   postRestoreChecks: string[]
+  rollbackChecks: string[]
   releaseEvidenceReady: boolean
   releaseApproved: boolean
   releaseAuditEvent: string
@@ -50,9 +52,12 @@ export async function startPostgresInfrastructure(
     if (!recovery.ready) throw new Error(recovery.readiness.reason ?? 'database recovery verification failed')
     const postRestore = await verifyPostgresPostRestore(pool, config.expectedMigrationBaseline, expectedMigrations)
     if (!postRestore.ready) throw new Error(postRestore.readiness.reason ?? 'database post-restore verification failed')
+    const rollback = verifyPostgresRollbackReadiness({ rollbackChecks: env.DATABASE_ROLLBACK_CHECKS?.split(',') })
+    if (!rollback.ready) throw new Error('database rollback readiness verification failed')
     const evidence = createPostgresDeploymentEvidence({
       migrationsApplied: verification.migrationsApplied,
       preflightChecks: preflight.checks, recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks,
+      rollbackChecks: rollback.checks,
     })
     if (!evidence.ready) throw new Error('database release evidence is incomplete')
     const releaseTimestamp = new Date().toISOString()
@@ -62,6 +67,7 @@ export async function startPostgresInfrastructure(
       migrationsApplied: verification.migrationsApplied,
       expectedMigrationBaseline: config.expectedMigrationBaseline,
       migrationBaselineVerified: verification.migrationsApplied >= config.expectedMigrationBaseline,
+      rollbackReady: rollback.ready,
       releaseId: config.releaseId, releaseTimestamp, releaseCommitSha,
     })
     if (!policy.releasable) throw new Error(policy.reasons.join('; '))

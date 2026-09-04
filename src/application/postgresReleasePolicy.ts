@@ -4,6 +4,7 @@ export interface PostgresReleasePolicyInput {
   migrationsApplied: number
   expectedMigrationBaseline?: number
   migrationBaselineVerified?: boolean
+  rollbackReady?: boolean
   releaseId?: string
   releaseTimestamp?: string
   releaseCommitSha?: string
@@ -66,6 +67,7 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
   if (!Number.isInteger(input.expectedMigrationBaseline) && input.expectedMigrationBaseline !== undefined) reasons.push('production release expected migration baseline is invalid')
   if (input.environment === 'production' && input.expectedMigrationBaseline !== undefined && input.migrationsApplied < input.expectedMigrationBaseline) reasons.push('production release migration baseline is below the expected level')
   if (input.environment === 'production' && input.migrationBaselineVerified === false) reasons.push('production release migration baseline verification failed')
+  if (input.environment === 'production' && input.rollbackReady !== true) reasons.push('production rollback readiness is missing')
   if (input.environment === 'production' && !input.releaseId?.trim()) reasons.push('production release identity is missing')
   if (input.environment === 'production' && input.releaseId !== undefined && hasControlCharacters(input.releaseId)) reasons.push('production release identity contains control characters')
   if (input.environment === 'production' && (!input.releaseTimestamp || Number.isNaN(Date.parse(input.releaseTimestamp)))) reasons.push('production release timestamp is invalid')
