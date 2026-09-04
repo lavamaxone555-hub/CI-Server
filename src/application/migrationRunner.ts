@@ -11,7 +11,7 @@ export interface TransactionalMigrationExecutor extends MigrationExecutor {
 }
 
 function assertSafeMigrationFileName(file: string): void {
-  if (!file || file.startsWith('/') || file.includes('\\') || file.split('/').includes('..')) {
+  if (file.normalize('NFC').trim() !== file || /[\u0000-\u001f\u007f]/.test(file) || !file || file.startsWith('/') || file.includes('\\') || file.split('/').includes('..')) {
     throw new Error(`unsafe migration file name: ${file}`)
   }
 }

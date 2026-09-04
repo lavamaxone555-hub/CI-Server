@@ -5,6 +5,13 @@ import { join } from 'node:path'
 import { runMigrations, runMigrationsTransactionally } from './migrationRunner'
 
 describe('migration runner', () => {
+  it('rejects non-canonical or control-character migration file names', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'retail-migrations-'))
+    await writeFile(join(directory, ' 001_first.sql'), 'FIRST')
+    await expect(runMigrations({ execute: async () => {} }, directory))
+      .rejects.toThrow('unsafe migration file name:  001_first.sql')
+  })
+
   it('runs SQL migrations in lexical order', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'retail-migrations-'))
     await writeFile(join(directory, '002_second.sql'), 'SECOND')
