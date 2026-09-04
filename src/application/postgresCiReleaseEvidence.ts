@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import type { PostgresReleaseAuditRecord } from './postgresReleaseAuditTrail'
 
 export interface PostgresCiReleaseEvidence {
@@ -13,6 +14,17 @@ function isCommitSha(value: string | undefined): boolean {
 
 function hasControlCharacters(value: string): boolean {
   return Array.from(value, (character) => character.charCodeAt(0)).some((code) => code <= 0x1f || code === 0x7f)
+}
+
+export function createPostgresReleaseEvidenceFingerprint(audit: PostgresReleaseAuditRecord): string {
+  const payload = JSON.stringify({
+    releaseId: audit.releaseId ?? '',
+    releaseCommitSha: audit.releaseCommitSha ?? '',
+    createdAt: audit.createdAt ?? '',
+    migrationsApplied: audit.migrationsApplied,
+    checks: audit.checks.map((check) => check.trim()),
+  })
+  return createHash('sha256').update(payload).digest('hex')
 }
 
 function hasDuplicateChecks(checks: readonly string[]): boolean {
@@ -34,8 +46,11 @@ export function verifyPostgresCiReleaseEvidence(
   if (!audit.releaseId?.trim()) failures.push('release identity is missing')
   else if (hasControlCharacters(audit.releaseId)) failures.push('release identity contains control characters')
   if (expectedRelease && audit.releaseId !== expectedRelease.releaseId) failures.push('release evidence identity does not match expected release')
-  const evidenceFingerprint = [audit.releaseId ?? '', audit.releaseCommitSha ?? '', audit.createdAt ?? '', audit.migrationsApplied, ...audit.checks.map((check) => check.trim())].join('|')
-  if (expectedRelease?.evidenceFingerprint !== undefined && evidenceFingerprint !== expectedRelease.evidenceFingerprint) failures.push('release evidence fingerprint does not match expected evidence')
+  const evidenceFingerprint = createPostgresReleaseEvidenceFingerprint(audit)
+  if (expectedRelease?.evidenceFingerprint !== undefined) {
+    if (!/^[0-9a-f]{64}$/i.test(expectedRelease.evidenceFingerprint)) failures.push('release evidence fingerprint is invalid')
+    else if (evidenceFingerprint !== expectedRelease.evidenceFingerprint) failures.push('release evidence fingerprint does not match expected evidence')
+  }
   if (!audit.createdAt || Number.isNaN(Date.parse(audit.createdAt))) failures.push('release timestamp is invalid')
   else {
     const parsedTimestamp = new Date(audit.createdAt)

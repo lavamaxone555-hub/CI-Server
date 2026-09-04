@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assertPostgresCiReleaseEvidence, verifyPostgresCiReleaseEvidence } from './postgresCiReleaseEvidence'
+import { assertPostgresCiReleaseEvidence, createPostgresReleaseEvidenceFingerprint, verifyPostgresCiReleaseEvidence } from './postgresCiReleaseEvidence'
 
 describe('PostgreSQL CI release evidence', () => {
   const audit = {
@@ -26,8 +26,18 @@ describe('PostgreSQL CI release evidence', () => {
     expect(verifyPostgresCiReleaseEvidence(legacyAudit)).toMatchObject({ verified: true, failures: [] })
   })
 
-  it('fails closed when an expected evidence fingerprint does not match', () => {
+  it('creates a canonical SHA-256 evidence fingerprint', () => {
+    expect(createPostgresReleaseEvidenceFingerprint(audit)).toMatch(/^[0-9a-f]{64}$/)
+    expect(createPostgresReleaseEvidenceFingerprint(audit)).toBe(createPostgresReleaseEvidenceFingerprint({ ...audit }))
+  })
+
+  it('fails closed when an expected evidence fingerprint is malformed', () => {
     expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', evidenceFingerprint: 'wrong' }).failures)
+      .toContain('release evidence fingerprint is invalid')
+  })
+
+  it('fails closed when an expected evidence fingerprint does not match', () => {
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', evidenceFingerprint: '0'.repeat(64) }).failures)
       .toContain('release evidence fingerprint does not match expected evidence')
   })
 
