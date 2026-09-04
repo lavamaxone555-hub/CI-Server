@@ -9,6 +9,17 @@ describe('PostgreSQL migration lock', () => {
     return { pool: { connect: async () => client, query: async () => undefined, end: async () => {} }, statements, release }
   }
 
+  it('releases the dedicated client when advisory lock acquisition fails', async () => {
+    const release = vi.fn()
+    const acquire = new Error('lock unavailable')
+    const pool = {
+      connect: async () => ({ query: async () => { throw acquire }, release }),
+      query: async () => undefined, end: async () => {},
+    }
+    await expect(withPostgresMigrationLock(pool, async () => 'done')).rejects.toBe(acquire)
+    expect(release).toHaveBeenCalledOnce()
+  })
+
   it('acquires and releases the advisory lock on the same dedicated client', async () => {
     const { pool, statements, release } = makePool()
     const result = await withPostgresMigrationLock(pool, async (client) => {
