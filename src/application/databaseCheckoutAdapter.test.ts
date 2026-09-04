@@ -43,6 +43,17 @@ describe('Database checkout adapter', () => {
     expect(calls).toEqual(['begin', 'sale', 'movement', 'rollback'])
   })
 
+  it('does not roll back when checkout commit begins and fails synchronously', () => {
+    const calls: string[] = []
+    const session: DatabaseCheckoutSession = {
+      begin: () => calls.push('begin'), commit: () => { calls.push('commit'); throw new Error('commit failed') }, rollback: () => calls.push('rollback'),
+      insertSale: (x) => { calls.push('sale'); return x }, insertInventoryMovement: (x) => x,
+      insertPayment: (x) => x, updateImei: (x) => x,
+    }
+    expect(() => persistCheckout(session, { sale, movements: [], payments: [], imeiUnits: [] })).toThrow('commit failed')
+    expect(calls).toEqual(['begin', 'sale', 'commit'])
+  })
+
   it('does not roll back after a commit failure because checkout outcome is unknown', () => {
     const calls: string[] = []
     const session: DatabaseCheckoutSession = {

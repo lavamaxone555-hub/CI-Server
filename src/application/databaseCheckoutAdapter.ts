@@ -17,17 +17,17 @@ export function persistCheckout(
   data: { sale: Sale; movements: InventoryMovement[]; payments: Payment[]; imeiUnits: ImeiUnit[] },
 ) {
   session.begin()
-  let persistenceCompleted = false
+  let commitAttempted = false
   try {
     const sale = session.insertSale(data.sale)
     const movements = data.movements.map((movement) => session.insertInventoryMovement(movement))
     const payments = data.payments.map((payment) => session.insertPayment(payment))
     const imeiUnits = data.imeiUnits.map((unit) => session.updateImei(unit))
-    persistenceCompleted = true
+    commitAttempted = true
     session.commit()
     return { sale, movements, payments, imeiUnits }
   } catch (error) {
-    if (persistenceCompleted) throw error
+    if (commitAttempted) throw error
     try {
       session.rollback()
     } catch (rollbackError) {
