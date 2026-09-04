@@ -1,4 +1,7 @@
+import { join } from 'node:path'
 import { initializePostgresDatabase } from './postgresIntegration'
+import { loadMigrationSources } from './migrationRunner'
+import { verifyPostgresMigrationHistory } from './postgresMigrationHistory'
 import type { PostgresReadiness } from './postgresReadiness'
 import { createPostgresPool } from './postgresDatabase'
 import { loadPostgresDeploymentConfig } from './postgresDeploymentConfig'
@@ -33,11 +36,16 @@ export async function startPostgresInfrastructure(
   const preflight = verifyPostgresDeploymentPreflight(env)
   if (!preflight.ready) throw new Error('database deployment preflight failed')
   const config = loadPostgresDeploymentConfig(env)
-  const migrations = config.migrationOnStartup ? await initializePostgresDatabase(env) : []
+  const migrationsDirectory = join(process.cwd(), 'database', 'migrations')
+  const migrations = config.migrationOnStartup ? await initializePostgresDatabase(env, migrationsDirectory) : []
   const pool = createPostgresPool(env)
   try {
     const verification = await verifyPostgresDeployment(pool, config.expectedMigrationBaseline)
     if (!verification.ready) throw new Error(verification.readiness.reason ?? 'database deployment verification failed')
+
+    const expectedMigrations = await loadMigrationSources(migrationsDirectory)
+    await verifyPostgresMigrationHistory(pool, expectedMigrations)
+
     const recovery = await verifyPostgresRecoveryReadiness(pool, config.expectedMigrationBaseline)
     if (!recovery.ready) throw new Error(recovery.readiness.reason ?? 'database recovery verification failed')
     const postRestore = await verifyPostgresPostRestore(pool, config.expectedMigrationBaseline)
