@@ -17,7 +17,7 @@ describe('migration runner', () => {
     await writeFile(join(directory, '001_first.sql'), 'FIRST')
     await writeFile(join(directory, '  notes.txt'), 'IGNORE')
     await expect(runMigrations({ execute: async () => {} }, directory))
-      .rejects.toThrow('unsafe migration file name:  notes.txt')
+      .rejects.toThrow('unsafe migration file name:   notes.txt')
   })
 
   it('runs SQL migrations in lexical order', async () => {
