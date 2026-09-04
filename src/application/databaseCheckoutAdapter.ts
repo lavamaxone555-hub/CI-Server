@@ -25,7 +25,12 @@ export function persistCheckout(
     session.commit()
     return { sale, movements, payments, imeiUnits }
   } catch (error) {
-    session.rollback()
+    try {
+      session.rollback()
+    } catch (rollbackError) {
+      const message = rollbackError instanceof Error ? rollbackError.message : 'unknown rollback failure'
+      throw new Error(`checkout persistence failed and rollback failed: ${message}`, { cause: error })
+    }
     throw error
   }
 }

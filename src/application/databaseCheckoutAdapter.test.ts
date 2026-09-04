@@ -32,4 +32,15 @@ describe('Database checkout adapter', () => {
     expect(() => persistCheckout(session, { sale, movements: [movement], payments: [payment], imeiUnits: [imei] })).toThrow('db failed')
     expect(calls).toEqual(['begin', 'sale', 'movement', 'rollback'])
   })
+
+  it('reports rollback failure without hiding checkout persistence failure', () => {
+    const original = new Error('db failed')
+    const session: DatabaseCheckoutSession = {
+      begin: () => {}, commit: () => {}, rollback: () => { throw new Error('rollback unavailable') },
+      insertSale: () => { throw original }, insertInventoryMovement: (x) => x,
+      insertPayment: (x) => x, updateImei: (x) => x,
+    }
+    expect(() => persistCheckout(session, { sale, movements: [], payments: [], imeiUnits: [] }))
+      .toThrow('checkout persistence failed and rollback failed: rollback unavailable')
+  })
 })
