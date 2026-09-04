@@ -17,6 +17,15 @@ describe('PostgreSQL deployment config', () => {
     expect(() => loadPostgresDeploymentConfig({ ...base, NODE_ENV: 'production', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true', RELEASE_ID: 'r1' })).toThrow('RELEASE_COMMIT_SHA')
   })
 
+  it('canonicalizes production release and commit identities', () => {
+    const config = loadPostgresDeploymentConfig({
+      ...base, NODE_ENV: 'production', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true',
+      RELEASE_ID: '  release-é  ', RELEASE_COMMIT_SHA: '  84A95CF  ',
+    })
+    expect(config.releaseId).toBe('release-é')
+    expect(config.releaseCommitSha).toBe('84a95cf')
+  })
+
   it('accepts a complete production deployment identity', () => {
     expect(loadPostgresDeploymentConfig({
       ...base, NODE_ENV: 'production', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true',

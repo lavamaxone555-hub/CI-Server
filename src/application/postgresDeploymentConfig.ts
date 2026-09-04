@@ -17,7 +17,7 @@ function hasControlCharacters(value: string): boolean {
 }
 
 function normalizeReleaseId(value: string | undefined): string {
-  const releaseId = value?.trim() || 'local'
+  const releaseId = value?.normalize('NFC').trim() || 'local'
   if (hasControlCharacters(releaseId)) {
     throw new Error('RELEASE_ID must not contain control characters')
   }
@@ -48,7 +48,7 @@ export function loadPostgresDeploymentConfig(
   if (!Number.isInteger(expectedMigrationBaseline) || expectedMigrationBaseline < 1) {
     throw new Error('DATABASE_EXPECTED_MIGRATION_BASELINE must be a positive integer')
   }
-  const releaseCommitSha = env.RELEASE_COMMIT_SHA?.trim()
+  const releaseCommitSha = env.RELEASE_COMMIT_SHA?.normalize('NFC').trim().toLowerCase()
   if (environment === 'production' && !isCommitSha(releaseCommitSha)) {
     throw new Error('RELEASE_COMMIT_SHA must be a valid commit SHA in production')
   }
