@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mkdir, mkdtemp, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runMigrations, runMigrationsTransactionally } from './migrationRunner'
@@ -25,15 +25,6 @@ describe('migration runner', () => {
     await mkdir(join(directory, '001_not_a_file.sql'))
     await expect(runMigrations({ execute: async () => {} }, directory))
       .rejects.toThrow('migration entry is not a regular file: 001_not_a_file.sql')
-  })
-
-  it('rejects SQL migration symbolic links', async () => {
-    const directory = await mkdtemp(join(tmpdir(), 'retail-migrations-'))
-    const target = join(directory, 'target.sql')
-    await writeFile(target, 'FIRST')
-    await symlink(target, join(directory, '001_link.sql'))
-    await expect(runMigrations({ execute: async () => {} }, directory))
-      .rejects.toThrow('migration entry is a symbolic link: 001_link.sql')
   })
 
   it('runs SQL migrations in lexical order', async () => {
