@@ -113,6 +113,13 @@ describe('PostgreSQL CI release evidence', () => {
       .toContain('release evidence is stale')
   })
 
+  it('rejects unsafe or unbounded release evidence freshness windows', () => {
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', maxEvidenceAgeMs: Number.MAX_SAFE_INTEGER }).failures)
+      .toContain('release evidence freshness window is invalid')
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', maxEvidenceAgeMs: 365 * 24 * 60 * 60 * 1000 + 1 }).failures)
+      .toContain('release evidence freshness window is invalid')
+  })
+
   it('rejects an invalid release evidence freshness window', () => {
     expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', maxEvidenceAgeMs: -1 }).failures)
       .toContain('release evidence freshness window is invalid')
