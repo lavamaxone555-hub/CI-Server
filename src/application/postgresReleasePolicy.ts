@@ -19,6 +19,8 @@ export interface PostgresReleasePolicyInput {
   maxEvidenceSkewMs?: number
   releaseCommitTimestamp?: string
   maxCommitEvidenceSkewMs?: number
+  releaseCommitShaTimestamp?: string
+  maxCommitShaEvidenceSkewMs?: number
 }
 
 export interface PostgresReleasePolicy {
@@ -71,6 +73,8 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
   if (input.environment === 'production' && input.maxEvidenceSkewMs !== undefined && (!Number.isFinite(input.maxEvidenceSkewMs) || input.maxEvidenceSkewMs < 0)) reasons.push('production evidence skew threshold is invalid')
   if (input.environment === 'production' && input.releaseCommitTimestamp !== undefined && parseTimestamp(input.releaseCommitTimestamp) === undefined) reasons.push('production release commit timestamp is invalid')
   if (input.environment === 'production' && input.maxCommitEvidenceSkewMs !== undefined && (!Number.isFinite(input.maxCommitEvidenceSkewMs) || input.maxCommitEvidenceSkewMs < 0)) reasons.push('production commit evidence skew threshold is invalid')
+  if (input.environment === 'production' && input.releaseCommitShaTimestamp !== undefined && parseTimestamp(input.releaseCommitShaTimestamp) === undefined) reasons.push('production release commit SHA timestamp is invalid')
+  if (input.environment === 'production' && input.maxCommitShaEvidenceSkewMs !== undefined && (!Number.isFinite(input.maxCommitShaEvidenceSkewMs) || input.maxCommitShaEvidenceSkewMs < 0)) reasons.push('production commit SHA evidence skew threshold is invalid')
 
   if (input.environment === 'production') {
     evaluateFreshness(
@@ -89,6 +93,12 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
     const commitTimestamp = parseTimestamp(input.releaseCommitTimestamp)
     if (releaseTimestamp !== undefined && commitTimestamp !== undefined && commitTimestamp > releaseTimestamp) reasons.push('production release commit timestamp is after the release')
     if (releaseTimestamp !== undefined && commitTimestamp !== undefined && input.maxCommitEvidenceSkewMs !== undefined && releaseTimestamp - commitTimestamp > input.maxCommitEvidenceSkewMs) reasons.push('production release evidence exceeds the allowed commit skew')
+  }
+  if (input.environment === 'production') {
+    const commitTimestamp = parseTimestamp(input.releaseCommitTimestamp)
+    const commitShaTimestamp = parseTimestamp(input.releaseCommitShaTimestamp)
+    if (commitTimestamp !== undefined && commitShaTimestamp !== undefined && commitShaTimestamp > commitTimestamp) reasons.push('production release commit SHA timestamp is after commit evidence')
+    if (commitTimestamp !== undefined && commitShaTimestamp !== undefined && input.maxCommitShaEvidenceSkewMs !== undefined && commitTimestamp - commitShaTimestamp > input.maxCommitShaEvidenceSkewMs) reasons.push('production commit evidence exceeds the allowed SHA skew')
   }
 
   if (input.environment === 'production' && input.verificationChecks !== undefined) {

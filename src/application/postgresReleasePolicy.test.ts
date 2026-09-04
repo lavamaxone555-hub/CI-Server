@@ -49,6 +49,13 @@ describe('PostgreSQL release policy', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitTimestamp: '2026-09-02T23:59:55.000Z', maxCommitEvidenceSkewMs: 5_000 })).toEqual({ releasable: true, reasons: [] })
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxCommitEvidenceSkewMs: -1 }).reasons).toContain('production commit evidence skew threshold is invalid')
   })
+  it('blocks inconsistent commit SHA evidence and enforces its skew boundary', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitTimestamp: '2026-09-02T23:59:50.000Z', releaseCommitShaTimestamp: '2026-09-02T23:59:51.000Z' }).reasons).toContain('production release commit SHA timestamp is after commit evidence')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitTimestamp: '2026-09-02T23:59:50.000Z', releaseCommitShaTimestamp: '2026-09-02T23:59:40.000Z', maxCommitShaEvidenceSkewMs: 5_000 }).reasons).toContain('production commit evidence exceeds the allowed SHA skew')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitTimestamp: '2026-09-02T23:59:50.000Z', releaseCommitShaTimestamp: '2026-09-02T23:59:45.000Z', maxCommitShaEvidenceSkewMs: 5_000 })).toEqual({ releasable: true, reasons: [] })
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitShaTimestamp: 'invalid' }).reasons).toContain('production release commit SHA timestamp is invalid')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxCommitShaEvidenceSkewMs: -1 }).reasons).toContain('production commit SHA evidence skew threshold is invalid')
+  })
   it('blocks malformed production commit identity', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitSha: 'release-1' }).releasable).toBe(false))
   it('blocks empty or unsafe production verification checks', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, verificationChecks: [] }).reasons).toContain('production release verification checks are missing')
