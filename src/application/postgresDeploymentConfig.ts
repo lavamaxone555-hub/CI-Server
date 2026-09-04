@@ -41,12 +41,18 @@ export function loadPostgresDeploymentConfig(
     throw new Error('DATABASE_SSL=true is required in production')
   }
   const rawMigrationOnStartup = env.DATABASE_MIGRATE_ON_STARTUP?.normalize('NFC').trim().toLowerCase()
-  if (rawMigrationOnStartup !== undefined && rawMigrationOnStartup !== '' && rawMigrationOnStartup !== 'true' && rawMigrationOnStartup !== 'false') {
+  if (rawMigrationOnStartup === '') {
+    throw new Error('DATABASE_MIGRATE_ON_STARTUP must not be empty')
+  }
+  if (rawMigrationOnStartup !== undefined && rawMigrationOnStartup !== 'true' && rawMigrationOnStartup !== 'false') {
     throw new Error('DATABASE_MIGRATE_ON_STARTUP must be true or false')
   }
   const migrationOnStartup = rawMigrationOnStartup !== 'false'
   const rawMigrationApproved = env.DATABASE_MIGRATION_APPROVED?.normalize('NFC').trim().toLowerCase()
-  if (rawMigrationApproved !== undefined && rawMigrationApproved !== '' && rawMigrationApproved !== 'true' && rawMigrationApproved !== 'false') {
+  if (rawMigrationApproved === '') {
+    throw new Error('DATABASE_MIGRATION_APPROVED must not be empty')
+  }
+  if (rawMigrationApproved !== undefined && rawMigrationApproved !== 'true' && rawMigrationApproved !== 'false') {
     throw new Error('DATABASE_MIGRATION_APPROVED must be true or false')
   }
   if (environment === 'production' && migrationOnStartup && rawMigrationApproved !== 'true') {

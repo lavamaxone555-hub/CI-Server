@@ -17,6 +17,13 @@ describe('PostgreSQL deployment config', () => {
       .toThrow('DATABASE_MIGRATION_APPROVED')
   })
 
+  it('rejects empty migration boolean configuration instead of silently defaulting', () => {
+    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATE_ON_STARTUP: '   ' }))
+      .toThrow('DATABASE_MIGRATE_ON_STARTUP must not be empty')
+    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATION_APPROVED: '   ' }))
+      .toThrow('DATABASE_MIGRATION_APPROVED must not be empty')
+  })
+
   it('canonicalizes migration boolean configuration', () => {
     expect(loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATE_ON_STARTUP: '  FALSE  ' }).migrationOnStartup).toBe(false)
     expect(loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATION_APPROVED: '  TRUE  ' }).migrationOnStartup).toBe(true)
