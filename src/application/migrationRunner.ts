@@ -14,6 +14,10 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(describeError(error))
+}
+
 function assertSafeMigrationFileName(file: string): void {
   if (file.normalize('NFC').trim() !== file || /[\u0000-\u001f\u007f]/.test(file) || !file || file.startsWith('/') || file.includes('\\') || file.split('/').includes('..')) {
     throw new Error(`unsafe migration file name: ${file}`)
@@ -83,7 +87,7 @@ export async function runMigrationsTransactionally(
     try {
       await executor.rollback()
     } catch (rollbackError) {
-      throw new Error(`migration failed and rollback failed: ${describeError(rollbackError)}`, { cause: error })
+      throw new Error(`migration failed and rollback failed: ${describeError(rollbackError)}`, { cause: toError(error) })
     }
     throw error
   }

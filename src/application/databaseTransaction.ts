@@ -9,6 +9,10 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(describeError(error))
+}
+
 export function withDatabaseTransaction<T>(session: DatabaseTransactionSession, operation: () => T): T {
   session.begin()
   let commitAttempted = false
@@ -22,7 +26,7 @@ export function withDatabaseTransaction<T>(session: DatabaseTransactionSession, 
     try {
       session.rollback()
     } catch (rollbackError) {
-      throw new Error(`database transaction failed and rollback failed: ${describeError(rollbackError)}`, { cause: error })
+      throw new Error(`database transaction failed and rollback failed: ${describeError(rollbackError)}`, { cause: toError(error) })
     }
     throw error
   }
