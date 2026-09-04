@@ -17,13 +17,9 @@ function assertSafeMigrationFileName(file: string): void {
 }
 
 export async function listMigrations(directory: string): Promise<string[]> {
-  return (await readdir(directory))
-    .filter((file) => file.endsWith('.sql'))
-    .filter((file) => {
-      assertSafeMigrationFileName(file)
-      return true
-    })
-    .sort()
+  const files = await readdir(directory)
+  for (const file of files) assertSafeMigrationFileName(file)
+  return files.filter((file) => file.endsWith('.sql')).sort()
 }
 
 export async function loadMigrationSources(directory: string): Promise<PlannedMigration[]> {
