@@ -30,7 +30,16 @@ export async function readAppliedPostgresMigrations(pool: PostgresQueryClient): 
   const result = await pool.query(
     'SELECT name, checksum FROM schema_migrations ORDER BY name',
   ) as QueryResult
-  for (const migration of result.rows) assertValidAppliedMigration(migration)
+  const migrationsByName = new Map<string, string>()
+  for (const migration of result.rows) {
+    assertValidAppliedMigration(migration)
+    const previousChecksum = migrationsByName.get(migration.name)
+    if (previousChecksum !== undefined && previousChecksum !== migration.checksum) {
+      throw new Error(`duplicate applied migration checksum mismatch: ${migration.name}`)
+    }
+    if (previousChecksum !== undefined) throw new Error(`duplicate applied migration name: ${migration.name}`)
+    migrationsByName.set(migration.name, migration.checksum)
+  }
   return result.rows
 }
 

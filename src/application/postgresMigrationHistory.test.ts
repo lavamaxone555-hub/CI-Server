@@ -58,6 +58,22 @@ describe('PostgreSQL migration history', () => {
     await expect(readAppliedPostgresMigrations(pool)).rejects.toThrow('unsafe applied migration name')
   })
 
+  it('rejects duplicate applied migration records from the database', async () => {
+    const duplicatePool = { query: async () => ({ rows: [
+      { name: '001.sql', checksum: 'abc' },
+      { name: '001.sql', checksum: 'abc' },
+    ] }), end: async () => {} }
+    await expect(readAppliedPostgresMigrations(duplicatePool))
+      .rejects.toThrow('duplicate applied migration name: 001.sql')
+
+    const conflictingPool = { query: async () => ({ rows: [
+      { name: '001.sql', checksum: 'abc' },
+      { name: '001.sql', checksum: 'drift' },
+    ] }), end: async () => {} }
+    await expect(readAppliedPostgresMigrations(conflictingPool))
+      .rejects.toThrow('duplicate applied migration checksum mismatch: 001.sql')
+  })
+
   it('rejects non-canonical or whitespace-padded migration records from the database', async () => {
     const paddedNamePool = { query: async () => ({ rows: [{ name: ' 001.sql', checksum: 'abc' }] }), end: async () => {} }
     await expect(readAppliedPostgresMigrations(paddedNamePool)).rejects.toThrow('unsafe applied migration name')
