@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { readFile, readdir } from 'node:fs/promises'
+import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { PlannedMigration } from './migrationHistory'
 
@@ -18,7 +18,13 @@ function assertSafeMigrationFileName(file: string): void {
 
 export async function listMigrations(directory: string): Promise<string[]> {
   const files = await readdir(directory)
-  for (const file of files) assertSafeMigrationFileName(file)
+  for (const file of files) {
+    assertSafeMigrationFileName(file)
+    const metadata = await stat(join(directory, file))
+    if (file.endsWith('.sql') && !metadata.isFile()) {
+      throw new Error(`migration entry is not a regular file: ${file}`)
+    }
+  }
   return files.filter((file) => file.endsWith('.sql')).sort()
 }
 

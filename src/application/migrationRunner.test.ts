@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runMigrations, runMigrationsTransactionally } from './migrationRunner'
@@ -18,6 +18,13 @@ describe('migration runner', () => {
     await writeFile(join(directory, '  notes.txt'), 'IGNORE')
     await expect(runMigrations({ execute: async () => {} }, directory))
       .rejects.toThrow('unsafe migration file name:   notes.txt')
+  })
+
+  it('rejects SQL migration entries that are not regular files', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'retail-migrations-'))
+    await mkdir(join(directory, '001_not_a_file.sql'))
+    await expect(runMigrations({ execute: async () => {} }, directory))
+      .rejects.toThrow('migration entry is not a regular file: 001_not_a_file.sql')
   })
 
   it('runs SQL migrations in lexical order', async () => {
