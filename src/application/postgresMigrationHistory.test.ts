@@ -79,6 +79,20 @@ describe('PostgreSQL migration history', () => {
     await expect(readAppliedPostgresMigrations(controlChecksumPool)).rejects.toThrow('invalid applied migration checksum')
   })
 
+  it('rejects invalid or duplicate expected migration baselines', async () => {
+    const pool = { query: async () => ({ rows: [{ name: '001.sql', checksum: 'abc' }] }), end: async () => {} }
+    await expect(verifyPostgresMigrationHistory(pool, [{ name: ' 001.sql', checksum: 'abc' }]))
+      .rejects.toThrow('unsafe applied migration name')
+    await expect(verifyPostgresMigrationHistory(pool, [
+      { name: '001.sql', checksum: 'abc' },
+      { name: '001.sql', checksum: 'abc' },
+    ])).rejects.toThrow('duplicate expected migration name: 001.sql')
+    await expect(verifyPostgresMigrationHistory(pool, [
+      { name: '001.sql', checksum: 'abc' },
+      { name: '001.sql', checksum: 'drift' },
+    ])).rejects.toThrow('duplicate expected migration checksum mismatch: 001.sql')
+  })
+
   it('rejects invalid migration records before persistence', async () => {
     const pool = { query: async () => ({ rows: [] }), end: async () => {} }
     await expect(recordAppliedPostgresMigration(pool, { name: '001.sql', checksum: '' }))

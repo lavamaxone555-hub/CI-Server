@@ -49,8 +49,17 @@ export async function verifyPostgresMigrationHistory(
   pool: PostgresQueryClient,
   expected: readonly AppliedMigration[],
 ): Promise<void> {
+  for (const migration of expected) assertValidAppliedMigration(migration)
+  const expectedByName = new Map<string, string>()
+  for (const migration of expected) {
+    const previousChecksum = expectedByName.get(migration.name)
+    if (previousChecksum !== undefined && previousChecksum !== migration.checksum) {
+      throw new Error(`duplicate expected migration checksum mismatch: ${migration.name}`)
+    }
+    if (previousChecksum !== undefined) throw new Error(`duplicate expected migration name: ${migration.name}`)
+    expectedByName.set(migration.name, migration.checksum)
+  }
   const applied = await readAppliedPostgresMigrations(pool)
-  const expectedByName = new Map(expected.map((migration) => [migration.name, migration.checksum]))
   for (const migration of applied) {
     const expectedChecksum = expectedByName.get(migration.name)
     if (expectedChecksum === undefined) {
