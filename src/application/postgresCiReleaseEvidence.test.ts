@@ -118,6 +118,12 @@ describe('PostgreSQL CI release evidence', () => {
       .toContain('release evidence freshness window is invalid')
   })
 
+  it('canonicalizes equivalent timestamps before fingerprinting evidence', () => {
+    const offsetTimestamp = { ...audit, createdAt: '2026-09-03T07:00:00.000+07:00' }
+    expect(createPostgresReleaseEvidenceFingerprint(offsetTimestamp)).toBe(createPostgresReleaseEvidenceFingerprint(audit))
+    expect(verifyPostgresCiReleaseEvidence(offsetTimestamp).failures).toContain('release timestamp is not canonical')
+  })
+
   it('rejects non-canonical timestamps to prevent ambiguous audit evidence', () => {
     expect(verifyPostgresCiReleaseEvidence({ ...audit, createdAt: '2026-09-03T00:00:00Z' }).failures)
       .toContain('release timestamp is not canonical')

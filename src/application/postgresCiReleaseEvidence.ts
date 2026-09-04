@@ -28,11 +28,17 @@ function canonicalizeCommitSha(value: string): string {
   return value.normalize('NFC').trim().toLowerCase()
 }
 
+function canonicalizeTimestamp(value: string): string | undefined {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return undefined
+  return parsed.toISOString()
+}
+
 export function createPostgresReleaseEvidenceFingerprint(audit: PostgresReleaseAuditRecord): string {
   const payload = JSON.stringify({
     releaseId: audit.releaseId === undefined ? '' : canonicalizeReleaseId(audit.releaseId),
     releaseCommitSha: audit.releaseCommitSha === undefined ? '' : canonicalizeCommitSha(audit.releaseCommitSha),
-    createdAt: audit.createdAt ?? '',
+    createdAt: audit.createdAt === undefined ? '' : canonicalizeTimestamp(audit.createdAt) ?? audit.createdAt,
     migrationsApplied: audit.migrationsApplied,
     checks: audit.checks.map(canonicalizeEvidenceCheck).sort(),
   })
@@ -70,10 +76,11 @@ export function verifyPostgresCiReleaseEvidence(
     if (!/^[0-9a-f]{64}$/i.test(expectedRelease.evidenceFingerprint)) failures.push('release evidence fingerprint is invalid')
     else if (evidenceFingerprint !== expectedRelease.evidenceFingerprint) failures.push('release evidence fingerprint does not match expected evidence')
   }
-  if (!audit.createdAt || Number.isNaN(Date.parse(audit.createdAt))) failures.push('release timestamp is invalid')
+  const auditTimestamp = audit.createdAt === undefined ? undefined : canonicalizeTimestamp(audit.createdAt)
+  if (!auditTimestamp) failures.push('release timestamp is invalid')
   else {
-    const parsedTimestamp = new Date(audit.createdAt)
-    if (parsedTimestamp.toISOString() !== audit.createdAt) failures.push('release timestamp is not canonical')
+    const parsedTimestamp = new Date(auditTimestamp)
+    if (audit.createdAt !== auditTimestamp) failures.push('release timestamp is not canonical')
     const now = nowMs
     if (parsedTimestamp.getTime() > now + 5 * 60 * 1000) failures.push('release timestamp is too far in the future')
     if (expectedRelease?.maxEvidenceAgeMs !== undefined) {
