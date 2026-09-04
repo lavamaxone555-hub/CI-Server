@@ -26,6 +26,10 @@ function isCommitSha(value: string | undefined): boolean {
   return !!value && /^[0-9a-f]{7,64}$/i.test(value)
 }
 
+function hasControlCharacters(value: string): boolean {
+  return Array.from(value, (character) => character.charCodeAt(0)).some((code) => code <= 0x1f || code === 0x7f)
+}
+
 function parseTimestamp(value: string | undefined): number | undefined {
   if (!value) return undefined
   const timestamp = Date.parse(value)
@@ -38,14 +42,19 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
   if (!input.evidenceReady) reasons.push('deployment evidence is incomplete')
   if (input.environment === 'production' && input.deploymentPreflightReady === false) reasons.push('production deployment preflight failed')
   if (input.environment === 'production' && input.deploymentVerificationReady === false) reasons.push('production deployment verification failed')
-  if (input.environment === 'production' && input.migrationsApplied < 1) reasons.push('production release requires an established migration baseline')
+  if (input.environment === 'production' && (!Number.isInteger(input.migrationsApplied) || input.migrationsApplied < 1)) reasons.push('production release requires an established migration baseline')
   if (!Number.isInteger(input.expectedMigrationBaseline) && input.expectedMigrationBaseline !== undefined) reasons.push('production release expected migration baseline is invalid')
   if (input.environment === 'production' && input.expectedMigrationBaseline !== undefined && input.migrationsApplied < input.expectedMigrationBaseline) reasons.push('production release migration baseline is below the expected level')
   if (input.environment === 'production' && input.migrationBaselineVerified === false) reasons.push('production release migration baseline verification failed')
   if (input.environment === 'production' && !input.releaseId?.trim()) reasons.push('production release identity is missing')
+  if (input.environment === 'production' && input.releaseId !== undefined && hasControlCharacters(input.releaseId)) reasons.push('production release identity contains control characters')
   if (input.environment === 'production' && (!input.releaseTimestamp || Number.isNaN(Date.parse(input.releaseTimestamp)))) reasons.push('production release timestamp is invalid')
   if (input.environment === 'production' && !isCommitSha(input.releaseCommitSha)) reasons.push('production release commit identity is invalid')
-  if (input.environment === 'production' && input.verificationChecks !== undefined && input.verificationChecks.length < 1) reasons.push('production release verification checks are missing')
+
+  if (input.environment === 'production' && input.verificationChecks !== undefined) {
+    if (input.verificationChecks.length < 1 || input.verificationChecks.some((check) => !check.trim())) reasons.push('production release verification checks are missing')
+    if (input.verificationChecks.some(hasControlCharacters)) reasons.push('production release verification checks contain control characters')
+  }
 
   if (input.environment === 'production') {
     if (input.maxReadinessLatencyMs !== undefined && (!Number.isFinite(input.maxReadinessLatencyMs) || input.maxReadinessLatencyMs <= 0)) reasons.push('production readiness latency threshold is invalid')
