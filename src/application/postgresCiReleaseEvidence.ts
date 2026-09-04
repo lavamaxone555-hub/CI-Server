@@ -73,8 +73,9 @@ export function verifyPostgresCiReleaseEvidence(
   }
   const evidenceFingerprint = createPostgresReleaseEvidenceFingerprint(audit)
   if (expectedRelease?.evidenceFingerprint !== undefined) {
-    if (!/^[0-9a-f]{64}$/i.test(expectedRelease.evidenceFingerprint)) failures.push('release evidence fingerprint is invalid')
-    else if (evidenceFingerprint !== expectedRelease.evidenceFingerprint) failures.push('release evidence fingerprint does not match expected evidence')
+    const expectedFingerprint = expectedRelease.evidenceFingerprint.normalize('NFC').trim().toLowerCase()
+    if (!/^[0-9a-f]{64}$/.test(expectedFingerprint)) failures.push('release evidence fingerprint is invalid')
+    else if (evidenceFingerprint !== expectedFingerprint) failures.push('release evidence fingerprint does not match expected evidence')
   }
   const auditTimestamp = audit.createdAt === undefined ? undefined : canonicalizeTimestamp(audit.createdAt)
   if (!auditTimestamp) failures.push('release timestamp is invalid')
