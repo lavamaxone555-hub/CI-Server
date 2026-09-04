@@ -36,6 +36,9 @@ describe('PostgreSQL release policy', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReleaseAgeMs: 60_000, now: '2026-09-03T00:02:00.000Z' }).reasons).toContain('production release evidence is stale')
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReleaseAgeMs: 60_000, now: '2026-09-02T23:59:00.000Z' }).reasons).toContain('production release timestamp is in the future')
   })
+  it('allows release evidence exactly at the freshness boundary', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReleaseAgeMs: 60_000, now: '2026-09-03T00:01:00.000Z' })).toEqual({ releasable: true, reasons: [] })
+  })
   it('blocks invalid production release freshness threshold', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReleaseAgeMs: 0 }).reasons).toContain('production release freshness threshold is invalid'))
   it('blocks malformed production commit identity', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitSha: 'release-1' }).releasable).toBe(false))
   it('blocks empty or unsafe production verification checks', () => {
@@ -48,18 +51,13 @@ describe('PostgreSQL release policy', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessLatencyMs: -1 }).reasons).toContain('production readiness latency is invalid')
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReadinessLatencyMs: 0 }).reasons).toContain('production readiness latency threshold is invalid')
   })
-  it('blocks stale readiness evidence', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:00:00.000Z', maxReadinessAgeMs: 60_000, now: '2026-09-03T00:02:00.000Z' }).reasons).toContain('production readiness evidence is stale')
+  it('blocks stale readiness evidence', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:00:00.000Z', maxReadinessAgeMs: 60_000, now: '2026-09-03T00:02:00.000Z' }).reasons).toContain('production readiness evidence is stale'))
+  it('blocks future readiness evidence timestamps', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:02:00.000Z', maxReadinessAgeMs: 60_000, now: '2026-09-03T00:00:00.000Z' }).reasons).toContain('production readiness evidence timestamp is in the future'))
+  it('allows readiness evidence exactly at the freshness boundary', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:00:00.000Z', maxReadinessAgeMs: 60_000, now: '2026-09-03T00:01:00.000Z' })).toEqual({ releasable: true, reasons: [] })
   })
-  it('blocks future readiness evidence timestamps', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:02:00.000Z', maxReadinessAgeMs: 60_000, now: '2026-09-03T00:00:00.000Z' }).reasons).toContain('production readiness evidence timestamp is in the future')
-  })
-  it('blocks readiness evidence that predates the release', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-02T23:59:59.999Z' }).reasons).toContain('production readiness evidence predates the release')
-  })
-  it('accepts readiness evidence collected after the release', () => {
-    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:00:01.000Z' })).toEqual({ releasable: true, reasons: [] })
-  })
+  it('blocks readiness evidence that predates the release', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-02T23:59:59.999Z' }).reasons).toContain('production readiness evidence predates the release'))
+  it('accepts readiness evidence collected after the release', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:00:01.000Z' })).toEqual({ releasable: true, reasons: [] }))
   it('blocks invalid readiness freshness metadata', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReadinessAgeMs: 0 }).reasons).toContain('production readiness freshness threshold is invalid')
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: 'invalid' }).reasons).toContain('production readiness timestamp is invalid')
