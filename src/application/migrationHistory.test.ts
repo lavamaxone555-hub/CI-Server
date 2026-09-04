@@ -53,6 +53,18 @@ describe('migration history', () => {
     )).toThrow('duplicate applied migration name: 001.sql')
   })
 
+
+  it('rejects applied migration history that skips an earlier planned migration', () => {
+    expect(() => pendingMigrations(
+      [
+        { name: '001.sql', checksum: 'a', sql: 'FIRST' },
+        { name: '002.sql', checksum: 'b', sql: 'SECOND' },
+        { name: '003.sql', checksum: 'c', sql: 'THIRD' },
+      ],
+      [{ name: '002.sql', checksum: 'b' }],
+    )).toThrow('applied migration history is not a prefix of the migration plan: 002.sql')
+  })
+
   it('rejects migration drift', () => {
     expect(() => pendingMigrations(
       [{ name: '001.sql', checksum: 'new', sql: 'NEW' }],

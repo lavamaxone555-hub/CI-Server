@@ -58,5 +58,14 @@ export function pendingMigrations(
       throw new Error(`migration checksum mismatch: ${migration.name}`)
     }
   }
+  let expectedAppliedNameIndex = 0
+  for (const migration of planned) {
+    if (!appliedByName.has(migration.name)) continue
+    const expectedApplied = planned[expectedAppliedNameIndex]
+    if (!expectedApplied || expectedApplied.name !== migration.name) {
+      throw new Error(`applied migration history is not a prefix of the migration plan: ${migration.name}`)
+    }
+    expectedAppliedNameIndex += 1
+  }
   return planned.filter((migration) => !appliedByName.has(migration.name))
 }
