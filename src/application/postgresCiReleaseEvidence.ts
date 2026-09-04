@@ -32,7 +32,8 @@ export function createPostgresReleaseEvidenceFingerprint(audit: PostgresReleaseA
 }
 
 function hasDuplicateChecks(checks: readonly string[]): boolean {
-  return new Set(checks.map((check) => check.trim())).size !== checks.length
+  const canonicalChecks = checks.map(canonicalizeEvidenceCheck)
+  return new Set(canonicalChecks).size !== canonicalChecks.length
 }
 
 export function verifyPostgresCiReleaseEvidence(
