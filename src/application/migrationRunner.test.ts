@@ -27,6 +27,17 @@ describe('migration runner', () => {
     expect(calls).toEqual(['BEGIN', 'FIRST', 'COMMIT'])
   })
 
+  it('does not roll back after a commit failure because migration outcome is unknown', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'retail-migrations-'))
+    await writeFile(join(directory, '001_first.sql'), 'FIRST')
+    const calls: string[] = []
+    await expect(runMigrationsTransactionally({
+      begin: async () => { calls.push('BEGIN') }, execute: async (sql) => { calls.push(sql) },
+      commit: async () => { calls.push('COMMIT'); throw new Error('commit failed') }, rollback: async () => { calls.push('ROLLBACK') },
+    }, directory)).rejects.toThrow('commit failed')
+    expect(calls).toEqual(['BEGIN', 'FIRST', 'COMMIT'])
+  })
+
   it('rolls back the complete migration set when execution fails', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'retail-migrations-'))
     await writeFile(join(directory, '001_first.sql'), 'FIRST')

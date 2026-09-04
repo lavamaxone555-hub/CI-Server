@@ -50,11 +50,14 @@ export async function runMigrationsTransactionally(
 ): Promise<string[]> {
   const files = await listMigrations(directory)
   await executor.begin()
+  let migrationsCompleted = false
   try {
     for (const file of files) await executor.execute(await readFile(join(directory, file), 'utf8'))
+    migrationsCompleted = true
     await executor.commit()
     return files
   } catch (error) {
+    if (migrationsCompleted) throw error
     try {
       await executor.rollback()
     } catch (rollbackError) {
