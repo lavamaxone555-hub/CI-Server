@@ -23,6 +23,7 @@ export function verifyPostgresCiReleaseEvidence(
   audit: PostgresReleaseAuditRecord,
   expectedMigrationBaseline?: number,
   expectedRelease?: { releaseId: string; releaseCommitSha?: string; maxEvidenceAgeMs?: number },
+  nowMs = Date.now(),
 ): PostgresCiReleaseEvidence {
   const failures: string[] = []
   const baseline = expectedMigrationBaseline ?? audit.expectedMigrationBaseline ?? 1
@@ -36,7 +37,7 @@ export function verifyPostgresCiReleaseEvidence(
   else {
     const parsedTimestamp = new Date(audit.createdAt)
     if (parsedTimestamp.toISOString() !== audit.createdAt) failures.push('release timestamp is not canonical')
-    const now = Date.now()
+    const now = nowMs
     if (parsedTimestamp.getTime() > now + 5 * 60 * 1000) failures.push('release timestamp is too far in the future')
     if (expectedRelease?.maxEvidenceAgeMs !== undefined) {
       if (!Number.isInteger(expectedRelease.maxEvidenceAgeMs) || expectedRelease.maxEvidenceAgeMs < 0) failures.push('release evidence freshness window is invalid')
@@ -57,8 +58,8 @@ export function verifyPostgresCiReleaseEvidence(
   return { verified, summary: verified ? 'postgres release evidence verified' : 'postgres release evidence verification failed', failures, audit }
 }
 
-export function assertPostgresCiReleaseEvidence(audit: PostgresReleaseAuditRecord, expectedMigrationBaseline?: number, expectedRelease?: { releaseId: string; releaseCommitSha?: string; maxEvidenceAgeMs?: number }): PostgresCiReleaseEvidence {
-  const evidence = verifyPostgresCiReleaseEvidence(audit, expectedMigrationBaseline, expectedRelease)
+export function assertPostgresCiReleaseEvidence(audit: PostgresReleaseAuditRecord, expectedMigrationBaseline?: number, expectedRelease?: { releaseId: string; releaseCommitSha?: string; maxEvidenceAgeMs?: number }, nowMs?: number): PostgresCiReleaseEvidence {
+  const evidence = verifyPostgresCiReleaseEvidence(audit, expectedMigrationBaseline, expectedRelease, nowMs)
   if (!evidence.verified) throw new Error('postgres CI release evidence failed: ' + evidence.failures.join('; '))
   return evidence
 }

@@ -44,6 +44,12 @@ describe('PostgreSQL CI release evidence', () => {
       .toContain('release timestamp is too far in the future')
   })
 
+  it('evaluates evidence freshness against an injected deterministic clock', () => {
+    const now = Date.parse('2026-09-03T00:00:00.002Z')
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', maxEvidenceAgeMs: 1 }, now).failures)
+      .toContain('release evidence is stale')
+  })
+
   it('fails closed on stale release evidence when a freshness window is required', () => {
     expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', maxEvidenceAgeMs: 1 }).failures)
       .toContain('release evidence is stale')
