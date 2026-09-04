@@ -12,7 +12,12 @@ export function withDatabaseTransaction<T>(session: DatabaseTransactionSession, 
     session.commit()
     return result
   } catch (error) {
-    session.rollback()
+    try {
+      session.rollback()
+    } catch (rollbackError) {
+      const message = rollbackError instanceof Error ? rollbackError.message : 'unknown rollback failure'
+      throw new Error(`database transaction failed and rollback failed: ${message}`, { cause: error })
+    }
     throw error
   }
 }
