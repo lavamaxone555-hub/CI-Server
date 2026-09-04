@@ -31,6 +31,14 @@ describe('PostgreSQL CI release evidence', () => {
     expect(createPostgresReleaseEvidenceFingerprint(audit)).toBe(createPostgresReleaseEvidenceFingerprint({ ...audit }))
   })
 
+  it('canonicalizes check order and Unicode before hashing evidence', () => {
+    const reordered = { ...audit, checks: ['β', 'é'] }
+    const decomposed = { ...audit, checks: ['e\u0301', 'β'] }
+    const composed = { ...audit, checks: ['é', 'β'] }
+    expect(createPostgresReleaseEvidenceFingerprint(reordered)).toBe(createPostgresReleaseEvidenceFingerprint({ ...reordered, checks: ['é', 'β'] }))
+    expect(createPostgresReleaseEvidenceFingerprint(decomposed)).toBe(createPostgresReleaseEvidenceFingerprint(composed))
+  })
+
   it('fails closed when an expected evidence fingerprint is malformed', () => {
     expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', evidenceFingerprint: 'wrong' }).failures)
       .toContain('release evidence fingerprint is invalid')

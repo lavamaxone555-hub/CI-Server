@@ -16,13 +16,17 @@ function hasControlCharacters(value: string): boolean {
   return Array.from(value, (character) => character.charCodeAt(0)).some((code) => code <= 0x1f || code === 0x7f)
 }
 
+function canonicalizeEvidenceCheck(check: string): string {
+  return check.normalize('NFC').trim()
+}
+
 export function createPostgresReleaseEvidenceFingerprint(audit: PostgresReleaseAuditRecord): string {
   const payload = JSON.stringify({
     releaseId: audit.releaseId ?? '',
     releaseCommitSha: audit.releaseCommitSha ?? '',
     createdAt: audit.createdAt ?? '',
     migrationsApplied: audit.migrationsApplied,
-    checks: audit.checks.map((check) => check.trim()),
+    checks: audit.checks.map(canonicalizeEvidenceCheck).sort(),
   })
   return createHash('sha256').update(payload).digest('hex')
 }
