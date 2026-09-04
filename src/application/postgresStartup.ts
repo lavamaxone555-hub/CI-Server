@@ -36,7 +36,7 @@ export async function startPostgresInfrastructure(
   const migrations = config.migrationOnStartup ? await initializePostgresDatabase(env) : []
   const pool = createPostgresPool(env)
   try {
-    const verification = await verifyPostgresDeployment(pool)
+    const verification = await verifyPostgresDeployment(pool, config.expectedMigrationBaseline)
     if (!verification.ready) throw new Error(verification.readiness.reason ?? 'database deployment verification failed')
     const recovery = await verifyPostgresRecoveryReadiness(pool)
     if (!recovery.ready) throw new Error(recovery.readiness.reason ?? 'database recovery verification failed')
