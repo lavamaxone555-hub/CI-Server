@@ -22,6 +22,11 @@ describe('PostgreSQL deployment config', () => {
     expect(loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATION_APPROVED: '  TRUE  ' }).migrationOnStartup).toBe(true)
   })
 
+  it('canonicalizes deployment environment configuration', () => {
+    expect(loadPostgresDeploymentConfig({ ...base, NODE_ENV: '  PRODUCTION  ', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true', RELEASE_ID: 'r1', RELEASE_COMMIT_SHA: '84a95cf' }).environment)
+      .toBe('production')
+  })
+
   it('requires SSL, release identity, and commit identity in production', () => {
     expect(() => loadPostgresDeploymentConfig({ ...base, NODE_ENV: 'production' })).toThrow('DATABASE_SSL=true')
     expect(() => loadPostgresDeploymentConfig({ ...base, NODE_ENV: 'production', DATABASE_SSL: 'true' })).toThrow('DATABASE_MIGRATION_APPROVED=true')

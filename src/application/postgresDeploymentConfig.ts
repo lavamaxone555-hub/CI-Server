@@ -16,6 +16,14 @@ function hasControlCharacters(value: string): boolean {
   return Array.from(value, (character) => character.charCodeAt(0)).some((code) => code <= 0x1f || code === 0x7f)
 }
 
+function normalizeEnvironment(value: string | undefined): 'development' | 'test' | 'production' {
+  const environment = value?.normalize('NFC').trim().toLowerCase() || 'development'
+  if (environment !== 'development' && environment !== 'test' && environment !== 'production') {
+    throw new Error('NODE_ENV must be development, test, or production')
+  }
+  return environment
+}
+
 function normalizeReleaseId(value: string | undefined): string {
   const releaseId = value?.normalize('NFC').trim() || 'local'
   if (hasControlCharacters(releaseId)) {
@@ -28,10 +36,7 @@ export function loadPostgresDeploymentConfig(
   env: Record<string, string | undefined> = process.env,
 ): PostgresDeploymentConfig {
   const database = loadDatabaseConfig(env)
-  const environment = env.NODE_ENV ?? 'development'
-  if (environment !== 'development' && environment !== 'test' && environment !== 'production') {
-    throw new Error('NODE_ENV must be development, test, or production')
-  }
+  const environment = normalizeEnvironment(env.NODE_ENV)
   if (environment === 'production' && !database.ssl) {
     throw new Error('DATABASE_SSL=true is required in production')
   }
