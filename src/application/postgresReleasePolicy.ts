@@ -17,6 +17,8 @@ export interface PostgresReleasePolicyInput {
   now?: string
   maxReleaseAgeMs?: number
   maxEvidenceSkewMs?: number
+  releaseCommitTimestamp?: string
+  maxCommitEvidenceSkewMs?: number
 }
 
 export interface PostgresReleasePolicy {
@@ -67,6 +69,8 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
   if (input.environment === 'production' && (!input.releaseTimestamp || Number.isNaN(Date.parse(input.releaseTimestamp)))) reasons.push('production release timestamp is invalid')
   if (input.environment === 'production' && input.maxReleaseAgeMs !== undefined && (!Number.isFinite(input.maxReleaseAgeMs) || input.maxReleaseAgeMs <= 0)) reasons.push('production release freshness threshold is invalid')
   if (input.environment === 'production' && input.maxEvidenceSkewMs !== undefined && (!Number.isFinite(input.maxEvidenceSkewMs) || input.maxEvidenceSkewMs < 0)) reasons.push('production evidence skew threshold is invalid')
+  if (input.environment === 'production' && input.releaseCommitTimestamp !== undefined && parseTimestamp(input.releaseCommitTimestamp) === undefined) reasons.push('production release commit timestamp is invalid')
+  if (input.environment === 'production' && input.maxCommitEvidenceSkewMs !== undefined && (!Number.isFinite(input.maxCommitEvidenceSkewMs) || input.maxCommitEvidenceSkewMs < 0)) reasons.push('production commit evidence skew threshold is invalid')
 
   if (input.environment === 'production') {
     evaluateFreshness(
@@ -80,6 +84,12 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
   }
 
   if (input.environment === 'production' && !isCommitSha(input.releaseCommitSha)) reasons.push('production release commit identity is invalid')
+  if (input.environment === 'production') {
+    const releaseTimestamp = parseTimestamp(input.releaseTimestamp)
+    const commitTimestamp = parseTimestamp(input.releaseCommitTimestamp)
+    if (releaseTimestamp !== undefined && commitTimestamp !== undefined && commitTimestamp > releaseTimestamp) reasons.push('production release commit timestamp is after the release')
+    if (releaseTimestamp !== undefined && commitTimestamp !== undefined && input.maxCommitEvidenceSkewMs !== undefined && releaseTimestamp - commitTimestamp > input.maxCommitEvidenceSkewMs) reasons.push('production release evidence exceeds the allowed commit skew')
+  }
 
   if (input.environment === 'production' && input.verificationChecks !== undefined) {
     if (input.verificationChecks.length < 1 || input.verificationChecks.some((check) => !check.trim())) reasons.push('production release verification checks are missing')

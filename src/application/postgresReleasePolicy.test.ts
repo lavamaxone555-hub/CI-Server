@@ -40,6 +40,15 @@ describe('PostgreSQL release policy', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReleaseAgeMs: 60_000, now: '2026-09-03T00:01:00.000Z' })).toEqual({ releasable: true, reasons: [] })
   })
   it('blocks invalid production release freshness threshold', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReleaseAgeMs: 0 }).reasons).toContain('production release freshness threshold is invalid'))
+  it('blocks invalid or temporally inconsistent commit evidence', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitTimestamp: 'invalid' }).reasons).toContain('production release commit timestamp is invalid')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitTimestamp: '2026-09-03T00:00:01.000Z' }).reasons).toContain('production release commit timestamp is after the release')
+  })
+  it('blocks commit evidence exceeding the allowed skew and accepts the boundary', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitTimestamp: '2026-09-02T23:59:50.000Z', maxCommitEvidenceSkewMs: 5_000 }).reasons).toContain('production release evidence exceeds the allowed commit skew')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitTimestamp: '2026-09-02T23:59:55.000Z', maxCommitEvidenceSkewMs: 5_000 })).toEqual({ releasable: true, reasons: [] })
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxCommitEvidenceSkewMs: -1 }).reasons).toContain('production commit evidence skew threshold is invalid')
+  })
   it('blocks malformed production commit identity', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, releaseCommitSha: 'release-1' }).releasable).toBe(false))
   it('blocks empty or unsafe production verification checks', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, verificationChecks: [] }).reasons).toContain('production release verification checks are missing')
