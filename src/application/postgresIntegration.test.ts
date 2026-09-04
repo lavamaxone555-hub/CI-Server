@@ -24,6 +24,16 @@ describe('PostgreSQL integration boundary', () => {
     ])
   })
 
+  it('does not roll back after a commit attempt fails through the PostgreSQL executor', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'postgres-migrations-'))
+    await writeFile(join(directory, '001_schema.sql'), 'CREATE TABLE demo (id TEXT PRIMARY KEY)')
+    const statements: string[] = []
+    const pool = { query: async (sql: string) => { statements.push(sql); if (sql === 'COMMIT') throw new Error('commit failed'); return { rows: [] } }, end: async () => {} }
+    const executor = createPostgresMigrationExecutor(pool)
+    await expect(runMigrationsTransactionally(executor, directory)).rejects.toThrow('commit failed')
+    expect(statements).not.toContain('ROLLBACK')
+  })
+
   it('propagates a real client failure instead of hiding it', async () => {
     const executor = createPostgresMigrationExecutor({ query: async () => { throw new Error('connection refused') } })
     await expect(executor.execute('SELECT 1')).rejects.toThrow('connection refused')

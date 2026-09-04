@@ -35,24 +35,28 @@ export async function initializePostgresDatabase(
       if (pending.length === 0) return []
       const executor = createPostgresMigrationExecutor(client)
       await executor.begin()
-      let migrationError: unknown
+      let commitAttempted = false
       try {
         for (const migration of pending) {
           await executor.execute(migration.sql)
           await recordAppliedPostgresMigration(client, migration)
         }
+        commitAttempted = true
         await executor.commit()
         return pending.map((migration) => migration.name)
       } catch (error) {
-        migrationError = error
+        if (commitAttempted) throw error
+        try {
+          await executor.rollback()
+        } catch (rollbackError) {
+          throw new AggregateError(
+            [error instanceof Error ? error : new Error(String(error)), rollbackError instanceof Error ? rollbackError : new Error(String(rollbackError))],
+            `migration failed and rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`,
+            { cause: error instanceof Error ? error : new Error(String(error)) },
+          )
+        }
+        throw error
       }
-
-      try {
-        await executor.rollback()
-      } catch (rollbackError) {
-        if (migrationError === undefined) throw rollbackError
-      }
-      throw migrationError
     })
   } finally {
     await pool.end()
