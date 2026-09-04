@@ -39,6 +39,11 @@ describe('PostgreSQL CI release evidence', () => {
     ])
   })
 
+  it('rejects non-canonical timestamps to prevent ambiguous audit evidence', () => {
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, createdAt: '2026-09-03T00:00:00Z' }).failures)
+      .toContain('release timestamp is not canonical')
+  })
+
   it('requires release identity and a valid timestamp', () => {
     expect(verifyPostgresCiReleaseEvidence({ ...audit, releaseId: '', createdAt: 'invalid' }).failures).toEqual([
       'release identity is missing',
