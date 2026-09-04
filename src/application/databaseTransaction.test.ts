@@ -43,6 +43,15 @@ describe('Database transaction boundary', () => {
     expect(calls).toEqual(['begin', 'write', 'commit'])
   })
 
+  it('preserves non-Error rollback failure detail', () => {
+    try {
+      withDatabaseTransaction({ begin: () => {}, commit: () => {}, rollback: () => { throw 'rollback unavailable' } }, () => { throw new Error('write failed') })
+      throw new Error('expected transaction to fail')
+    } catch (error) {
+      expect(error).toMatchObject({ message: 'database transaction failed and rollback failed: rollback unavailable', cause: expect.objectContaining({ message: 'write failed' }) })
+    }
+  })
+
   it('reports rollback failure without hiding the original transaction failure', () => {
     const original = new Error('write failed')
     expect(() => withDatabaseTransaction({

@@ -5,6 +5,10 @@ export interface DatabaseTransactionSession {
 }
 
 /** Executes a synchronous application workflow atomically through a real database transaction. */
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
 export function withDatabaseTransaction<T>(session: DatabaseTransactionSession, operation: () => T): T {
   session.begin()
   let commitAttempted = false
@@ -18,8 +22,7 @@ export function withDatabaseTransaction<T>(session: DatabaseTransactionSession, 
     try {
       session.rollback()
     } catch (rollbackError) {
-      const message = rollbackError instanceof Error ? rollbackError.message : 'unknown rollback failure'
-      throw new Error(`database transaction failed and rollback failed: ${message}`, { cause: error })
+      throw new Error(`database transaction failed and rollback failed: ${describeError(rollbackError)}`, { cause: error })
     }
     throw error
   }
