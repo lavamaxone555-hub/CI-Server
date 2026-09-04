@@ -49,4 +49,32 @@ describe('PostgreSQL migration history', () => {
     await expect(verifyPostgresMigrationHistory(pool, [{ name: '001.sql', checksum: 'abc' }]))
       .rejects.toThrow('migration checksum mismatch: 001.sql')
   })
+
+  it('rejects unsafe applied migration names', async () => {
+    const pool = {
+      query: async () => ({ rows: [{ name: '../001.sql', checksum: 'abc' }] }),
+      end: async () => {},
+    }
+    await expect(readAppliedPostgresMigrations(pool)).rejects.toThrow('unsafe applied migration name')
+  })
+
+  it('rejects blank or control-character checksums from the database', async () => {
+    const blankChecksumPool = {
+      query: async () => ({ rows: [{ name: '001.sql', checksum: '   ' }] }),
+      end: async () => {},
+    }
+    await expect(readAppliedPostgresMigrations(blankChecksumPool)).rejects.toThrow('invalid applied migration checksum')
+
+    const controlChecksumPool = {
+      query: async () => ({ rows: [{ name: '001.sql', checksum: 'abc\nforged' }] }),
+      end: async () => {},
+    }
+    await expect(readAppliedPostgresMigrations(controlChecksumPool)).rejects.toThrow('invalid applied migration checksum')
+  })
+
+  it('rejects invalid migration records before persistence', async () => {
+    const pool = { query: async () => ({ rows: [] }), end: async () => {} }
+    await expect(recordAppliedPostgresMigration(pool, { name: '001.sql', checksum: '' }))
+      .rejects.toThrow('invalid applied migration checksum')
+  })
 })

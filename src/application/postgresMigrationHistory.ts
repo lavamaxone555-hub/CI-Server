@@ -5,6 +5,19 @@ interface QueryResult {
   rows: AppliedMigration[]
 }
 
+function hasControlCharacters(value: string): boolean {
+  return Array.from(value, (character) => character.charCodeAt(0)).some((code) => code <= 0x1f || code === 0x7f)
+}
+
+function assertValidAppliedMigration(migration: AppliedMigration): void {
+  if (!migration.name.trim() || migration.name.startsWith('/') || migration.name.includes('\\') || migration.name.split('/').includes('..')) {
+    throw new Error(`unsafe applied migration name: ${migration.name}`)
+  }
+  if (!migration.checksum.trim() || hasControlCharacters(migration.checksum)) {
+    throw new Error(`invalid applied migration checksum: ${migration.name}`)
+  }
+}
+
 export async function ensurePostgresMigrationHistory(pool: PostgresPool): Promise<void> {
   await pool.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
     name TEXT PRIMARY KEY,
@@ -17,6 +30,7 @@ export async function readAppliedPostgresMigrations(pool: PostgresPool): Promise
   const result = await pool.query(
     'SELECT name, checksum FROM schema_migrations ORDER BY name',
   ) as QueryResult
+  for (const migration of result.rows) assertValidAppliedMigration(migration)
   return result.rows
 }
 
@@ -24,6 +38,7 @@ export async function recordAppliedPostgresMigration(
   pool: PostgresPool,
   migration: AppliedMigration,
 ): Promise<void> {
+  assertValidAppliedMigration(migration)
   await pool.query(
     'INSERT INTO schema_migrations (name, checksum) VALUES ($1, $2)',
     [migration.name, migration.checksum],
