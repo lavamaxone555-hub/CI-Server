@@ -136,6 +136,11 @@ describe('PostgreSQL CI release evidence', () => {
       .toContain('verification checks contain duplicate entries')
   })
 
+  it('rejects verification checks that become empty after canonicalization', () => {
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, checks: ['preflight passed', '\u00a0'] }).failures)
+      .toContain('verification checks contain an empty entry')
+  })
+
   it('rejects empty or duplicate verification checks', () => {
     expect(verifyPostgresCiReleaseEvidence({ ...audit, checks: ['preflight passed', ''] }).failures)
       .toContain('verification checks contain an empty entry')

@@ -74,7 +74,7 @@ export function verifyPostgresCiReleaseEvidence(
   if (!audit.releaseApproved) failures.push('release approval is missing')
   if (audit.migrationsApplied < baseline) failures.push('migration baseline is below the expected level')
   if (audit.checks.length < 1) failures.push('verification checks are missing')
-  if (audit.checks.some((check) => !check.trim())) failures.push('verification checks contain an empty entry')
+  if (audit.checks.some((check) => !canonicalizeEvidenceCheck(check))) failures.push('verification checks contain an empty entry')
   if (audit.checks.some((check) => hasControlCharacters(check))) failures.push('verification checks contain control characters')
   if (hasDuplicateChecks(audit.checks)) failures.push('verification checks contain duplicate entries')
   const verified = failures.length === 0
