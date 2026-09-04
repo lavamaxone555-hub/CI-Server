@@ -84,6 +84,6 @@ describe('Database checkout adapter', () => {
       insertPayment: (x) => x, updateImei: (x) => x,
     }
     expect(() => persistCheckout(session, { sale, movements: [], payments: [], imeiUnits: [] }))
-      .toThrow('checkout persistence failed and rollback failed: rollback unavailable')
+      .toThrow('database transaction failed and rollback failed: rollback unavailable')
   })
 })
