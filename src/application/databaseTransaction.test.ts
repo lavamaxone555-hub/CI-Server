@@ -20,6 +20,14 @@ describe('Database transaction boundary', () => {
     expect(calls).toEqual(['begin', 'sale', 'inventory', 'payment', 'rollback'])
   })
 
+  it('does not roll back after a commit failure because the transaction outcome is unknown', () => {
+    const calls: string[] = []
+    expect(() => withDatabaseTransaction({
+      begin: () => calls.push('begin'), commit: () => { calls.push('commit'); throw new Error('commit failed') }, rollback: () => calls.push('rollback'),
+    }, () => { calls.push('write'); return 'ok' })).toThrow('commit failed')
+    expect(calls).toEqual(['begin', 'write', 'commit'])
+  })
+
   it('reports rollback failure without hiding the original transaction failure', () => {
     const original = new Error('write failed')
     expect(() => withDatabaseTransaction({
