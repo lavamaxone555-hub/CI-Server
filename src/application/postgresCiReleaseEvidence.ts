@@ -22,7 +22,7 @@ function hasDuplicateChecks(checks: readonly string[]): boolean {
 export function verifyPostgresCiReleaseEvidence(
   audit: PostgresReleaseAuditRecord,
   expectedMigrationBaseline?: number,
-  expectedRelease?: { releaseId: string; releaseCommitSha?: string; maxEvidenceAgeMs?: number },
+  expectedRelease?: { releaseId: string; releaseCommitSha?: string; evidenceFingerprint?: string; maxEvidenceAgeMs?: number },
   nowMs = Date.now(),
 ): PostgresCiReleaseEvidence {
   const failures: string[] = []
@@ -34,6 +34,8 @@ export function verifyPostgresCiReleaseEvidence(
   if (!audit.releaseId?.trim()) failures.push('release identity is missing')
   else if (hasControlCharacters(audit.releaseId)) failures.push('release identity contains control characters')
   if (expectedRelease && audit.releaseId !== expectedRelease.releaseId) failures.push('release evidence identity does not match expected release')
+  const evidenceFingerprint = [audit.releaseId ?? '', audit.releaseCommitSha ?? '', audit.createdAt ?? '', audit.migrationsApplied, ...audit.checks.map((check) => check.trim())].join('|')
+  if (expectedRelease?.evidenceFingerprint !== undefined && evidenceFingerprint !== expectedRelease.evidenceFingerprint) failures.push('release evidence fingerprint does not match expected evidence')
   if (!audit.createdAt || Number.isNaN(Date.parse(audit.createdAt))) failures.push('release timestamp is invalid')
   else {
     const parsedTimestamp = new Date(audit.createdAt)
@@ -59,7 +61,7 @@ export function verifyPostgresCiReleaseEvidence(
   return { verified, summary: verified ? 'postgres release evidence verified' : 'postgres release evidence verification failed', failures, audit }
 }
 
-export function assertPostgresCiReleaseEvidence(audit: PostgresReleaseAuditRecord, expectedMigrationBaseline?: number, expectedRelease?: { releaseId: string; releaseCommitSha?: string; maxEvidenceAgeMs?: number }, nowMs?: number): PostgresCiReleaseEvidence {
+export function assertPostgresCiReleaseEvidence(audit: PostgresReleaseAuditRecord, expectedMigrationBaseline?: number, expectedRelease?: { releaseId: string; releaseCommitSha?: string; evidenceFingerprint?: string; maxEvidenceAgeMs?: number }, nowMs?: number): PostgresCiReleaseEvidence {
   const evidence = verifyPostgresCiReleaseEvidence(audit, expectedMigrationBaseline, expectedRelease, nowMs)
   if (!evidence.verified) throw new Error('postgres CI release evidence failed: ' + evidence.failures.join('; '))
   return evidence
