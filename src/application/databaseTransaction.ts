@@ -13,6 +13,10 @@ function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(describeError(error))
 }
 
+function combineRollbackFailure(error: unknown, rollbackError: unknown): Error {
+  return new AggregateError([toError(error), toError(rollbackError)], `database transaction failed and rollback failed: ${describeError(rollbackError)}`, { cause: toError(error) })
+}
+
 export function withDatabaseTransaction<T>(session: DatabaseTransactionSession, operation: () => T): T {
   session.begin()
   let commitAttempted = false
@@ -26,7 +30,7 @@ export function withDatabaseTransaction<T>(session: DatabaseTransactionSession, 
     try {
       session.rollback()
     } catch (rollbackError) {
-      throw new Error(`database transaction failed and rollback failed: ${describeError(rollbackError)}`, { cause: toError(error) })
+      throw combineRollbackFailure(error, rollbackError)
     }
     throw error
   }

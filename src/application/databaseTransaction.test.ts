@@ -61,6 +61,19 @@ describe('Database transaction boundary', () => {
     }
   })
 
+  it('exposes both primary and rollback failures structurally', () => {
+    const original = new Error('write failed')
+    const rollback = new Error('rollback unavailable')
+    try {
+      withDatabaseTransaction({ begin: () => {}, commit: () => {}, rollback: () => { throw rollback } }, () => { throw original })
+      throw new Error('expected transaction to fail')
+    } catch (error) {
+      expect(error).toBeInstanceOf(AggregateError)
+      expect((error as AggregateError).errors).toEqual([original, rollback])
+      expect((error as Error).cause).toBe(original)
+    }
+  })
+
   it('reports rollback failure without hiding the original transaction failure', () => {
     const original = new Error('write failed')
     expect(() => withDatabaseTransaction({
