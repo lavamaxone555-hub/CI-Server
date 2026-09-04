@@ -12,13 +12,11 @@ export function createPostgresMigrationExecutor(client: PostgresQueryClient): Tr
   return {
     begin: async () => { await client.query('BEGIN') },
     execute: async (sql) => { await client.query(sql) },
-    commit: async () => { await client.query('COMMIT') },
+    commit: async () => {
+      try { await client.query('COMMIT') } catch (error) { throw normalizeTransactionFailure(error) }
+    },
     rollback: async () => {
-      try {
-        await client.query('ROLLBACK')
-      } catch (error) {
-        throw normalizeTransactionFailure(error)
-      }
+      try { await client.query('ROLLBACK') } catch (error) { throw normalizeTransactionFailure(error) }
     },
   }
 }

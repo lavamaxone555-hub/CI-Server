@@ -1,17 +1,25 @@
 import { Pool } from 'pg'
 import { loadDatabaseConfig } from './databaseConfig'
 
-export interface PostgresPool {
+export interface PostgresQueryClient {
   query(sql: string, parameters?: unknown[]): Promise<unknown>
+}
+
+export interface PostgresClient extends PostgresQueryClient {
+  release(): void
+}
+
+export interface PostgresPool extends PostgresQueryClient {
   end(): Promise<void>
 }
 
-export function createPostgresPool(env: Record<string, string | undefined> = process.env): PostgresPool {
+export interface PostgresPoolWithClient extends PostgresPool {
+  connect(): Promise<PostgresClient>
+}
+
+export function createPostgresPool(env: NodeJS.ProcessEnv): PostgresPoolWithClient {
   const config = loadDatabaseConfig(env)
-  return new Pool({
-    connectionString: config.connectionString,
-    ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
-  })
+  return new Pool(config)
 }
 
 export async function verifyPostgresConnection(pool: PostgresPool): Promise<void> {

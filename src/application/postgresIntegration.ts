@@ -29,17 +29,17 @@ export async function initializePostgresDatabase(
   const pool = createPostgresPool(env)
   try {
     await verifyPostgresConnection(pool)
-    return await withPostgresMigrationLock(pool, async () => {
-      await ensurePostgresMigrationHistory(pool)
-      const pending = pendingMigrations(planned, await readAppliedPostgresMigrations(pool))
+    return await withPostgresMigrationLock(pool, async (client) => {
+      await ensurePostgresMigrationHistory(client)
+      const pending = pendingMigrations(planned, await readAppliedPostgresMigrations(client))
       if (pending.length === 0) return []
-      const executor = createPostgresMigrationExecutor(pool)
+      const executor = createPostgresMigrationExecutor(client)
       await executor.begin()
       let migrationError: unknown
       try {
         for (const migration of pending) {
           await executor.execute(migration.sql)
-          await recordAppliedPostgresMigration(pool, migration)
+          await recordAppliedPostgresMigration(client, migration)
         }
         await executor.commit()
         return pending.map((migration) => migration.name)

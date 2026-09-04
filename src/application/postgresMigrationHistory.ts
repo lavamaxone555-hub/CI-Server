@@ -1,5 +1,5 @@
 import type { AppliedMigration } from './migrationHistory'
-import type { PostgresPool } from './postgresDatabase'
+import type { PostgresQueryClient } from './postgresDatabase'
 
 interface QueryResult {
   rows: AppliedMigration[]
@@ -18,7 +18,7 @@ function assertValidAppliedMigration(migration: AppliedMigration): void {
   }
 }
 
-export async function ensurePostgresMigrationHistory(pool: PostgresPool): Promise<void> {
+export async function ensurePostgresMigrationHistory(pool: PostgresQueryClient): Promise<void> {
   await pool.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
     name TEXT PRIMARY KEY,
     checksum TEXT NOT NULL,
@@ -26,7 +26,7 @@ export async function ensurePostgresMigrationHistory(pool: PostgresPool): Promis
   )`)
 }
 
-export async function readAppliedPostgresMigrations(pool: PostgresPool): Promise<AppliedMigration[]> {
+export async function readAppliedPostgresMigrations(pool: PostgresQueryClient): Promise<AppliedMigration[]> {
   const result = await pool.query(
     'SELECT name, checksum FROM schema_migrations ORDER BY name',
   ) as QueryResult
@@ -35,7 +35,7 @@ export async function readAppliedPostgresMigrations(pool: PostgresPool): Promise
 }
 
 export async function recordAppliedPostgresMigration(
-  pool: PostgresPool,
+  pool: PostgresQueryClient,
   migration: AppliedMigration,
 ): Promise<void> {
   assertValidAppliedMigration(migration)
@@ -46,7 +46,7 @@ export async function recordAppliedPostgresMigration(
 }
 
 export async function verifyPostgresMigrationHistory(
-  pool: PostgresPool,
+  pool: PostgresQueryClient,
   expected: readonly AppliedMigration[],
 ): Promise<void> {
   const applied = await readAppliedPostgresMigrations(pool)

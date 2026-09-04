@@ -1,26 +1,35 @@
-import type { PostgresPool } from './postgresDatabase'
+import type { PostgresClient, PostgresPoolWithClient } from './postgresDatabase'
 
 export const POSTGRES_MIGRATION_LOCK_ID = 73910421
 
 export async function withPostgresMigrationLock<T>(
-  pool: PostgresPool,
-  operation: () => Promise<T>,
+  pool: PostgresPoolWithClient,
+  operation: (client: PostgresClient) => Promise<T>,
 ): Promise<T> {
-  await pool.query(`SELECT pg_advisory_lock(${POSTGRES_MIGRATION_LOCK_ID})`)
+  const client = await pool.connect()
   let result!: T
   let operationError: unknown
+  let lockAcquired = false
   try {
-    result = await operation()
-  } catch (error) {
-    operationError = error
-  }
+    await client.query(`SELECT pg_advisory_lock(${POSTGRES_MIGRATION_LOCK_ID})`)
+    lockAcquired = true
+    try {
+      result = await operation(client)
+    } catch (error) {
+      operationError = error
+    }
 
-  try {
-    await pool.query(`SELECT pg_advisory_unlock(${POSTGRES_MIGRATION_LOCK_ID})`)
-  } catch (unlockError) {
-    if (operationError === undefined) throw unlockError
-  }
+    if (lockAcquired) {
+      try {
+        await client.query(`SELECT pg_advisory_unlock(${POSTGRES_MIGRATION_LOCK_ID})`)
+      } catch (unlockError) {
+        if (operationError === undefined) throw unlockError
+      }
+    }
 
-  if (operationError !== undefined) throw operationError
-  return result
+    if (operationError !== undefined) throw operationError
+    return result
+  } finally {
+    client.release()
+  }
 }
