@@ -49,6 +49,18 @@ describe('PostgreSQL CI release evidence', () => {
       .toContain('release evidence fingerprint does not match expected evidence')
   })
 
+  it('fails closed on invalid expected release identity contracts', () => {
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: '   ' }).failures)
+      .toContain('expected release identity is invalid')
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1\nprod' }).failures)
+      .toContain('expected release identity contains control characters')
+  })
+
+  it('fails closed on an invalid expected release commit contract', () => {
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', releaseCommitSha: 'bad!' }).failures)
+      .toContain('expected release commit identity is invalid')
+  })
+
   it('fails closed when audit identity is not bound to the expected release', () => {
     expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-2', releaseCommitSha: '84a95cf' }).failures)
       .toContain('release evidence identity does not match expected release')

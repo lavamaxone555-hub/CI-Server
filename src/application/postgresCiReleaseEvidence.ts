@@ -50,7 +50,9 @@ export function verifyPostgresCiReleaseEvidence(
     && expectedMigrationBaseline !== audit.expectedMigrationBaseline) failures.push('release evidence baseline does not match audit baseline')
   if (!audit.releaseId?.trim()) failures.push('release identity is missing')
   else if (hasControlCharacters(audit.releaseId)) failures.push('release identity contains control characters')
-  if (expectedRelease && audit.releaseId !== expectedRelease.releaseId) failures.push('release evidence identity does not match expected release')
+  if (expectedRelease && !expectedRelease.releaseId.trim()) failures.push('expected release identity is invalid')
+  else if (expectedRelease && hasControlCharacters(expectedRelease.releaseId)) failures.push('expected release identity contains control characters')
+  else if (expectedRelease && audit.releaseId !== expectedRelease.releaseId) failures.push('release evidence identity does not match expected release')
   const evidenceFingerprint = createPostgresReleaseEvidenceFingerprint(audit)
   if (expectedRelease?.evidenceFingerprint !== undefined) {
     if (!/^[0-9a-f]{64}$/i.test(expectedRelease.evidenceFingerprint)) failures.push('release evidence fingerprint is invalid')
@@ -68,7 +70,10 @@ export function verifyPostgresCiReleaseEvidence(
     }
   }
   if (audit.environment === 'production' && !isCommitSha(audit.releaseCommitSha)) failures.push('release commit identity is invalid')
-  if (expectedRelease?.releaseCommitSha && audit.releaseCommitSha !== expectedRelease.releaseCommitSha) failures.push('release evidence commit does not match expected release')
+  if (expectedRelease?.releaseCommitSha !== undefined) {
+    if (!isCommitSha(expectedRelease.releaseCommitSha)) failures.push('expected release commit identity is invalid')
+    else if (audit.releaseCommitSha !== expectedRelease.releaseCommitSha) failures.push('release evidence commit does not match expected release')
+  }
   if (!Number.isInteger(audit.migrationsApplied) || audit.migrationsApplied < 0) failures.push('applied migration count is invalid')
   if (!audit.evidenceReady) failures.push('deployment evidence is incomplete')
   if (!audit.releaseApproved) failures.push('release approval is missing')
