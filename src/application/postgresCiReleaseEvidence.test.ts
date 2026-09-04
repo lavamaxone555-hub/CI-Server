@@ -44,6 +44,16 @@ describe('PostgreSQL CI release evidence', () => {
       .toContain('release timestamp is too far in the future')
   })
 
+  it('fails closed on stale release evidence when a freshness window is required', () => {
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', maxEvidenceAgeMs: 1 }).failures)
+      .toContain('release evidence is stale')
+  })
+
+  it('rejects an invalid release evidence freshness window', () => {
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', maxEvidenceAgeMs: -1 }).failures)
+      .toContain('release evidence freshness window is invalid')
+  })
+
   it('rejects non-canonical timestamps to prevent ambiguous audit evidence', () => {
     expect(verifyPostgresCiReleaseEvidence({ ...audit, createdAt: '2026-09-03T00:00:00Z' }).failures)
       .toContain('release timestamp is not canonical')

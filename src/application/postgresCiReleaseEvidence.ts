@@ -22,7 +22,7 @@ function hasDuplicateChecks(checks: readonly string[]): boolean {
 export function verifyPostgresCiReleaseEvidence(
   audit: PostgresReleaseAuditRecord,
   expectedMigrationBaseline?: number,
-  expectedRelease?: { releaseId: string; releaseCommitSha?: string },
+  expectedRelease?: { releaseId: string; releaseCommitSha?: string; maxEvidenceAgeMs?: number },
 ): PostgresCiReleaseEvidence {
   const failures: string[] = []
   const baseline = expectedMigrationBaseline ?? audit.expectedMigrationBaseline ?? 1
@@ -36,7 +36,12 @@ export function verifyPostgresCiReleaseEvidence(
   else {
     const parsedTimestamp = new Date(audit.createdAt)
     if (parsedTimestamp.toISOString() !== audit.createdAt) failures.push('release timestamp is not canonical')
-    if (parsedTimestamp.getTime() > Date.now() + 5 * 60 * 1000) failures.push('release timestamp is too far in the future')
+    const now = Date.now()
+    if (parsedTimestamp.getTime() > now + 5 * 60 * 1000) failures.push('release timestamp is too far in the future')
+    if (expectedRelease?.maxEvidenceAgeMs !== undefined) {
+      if (!Number.isInteger(expectedRelease.maxEvidenceAgeMs) || expectedRelease.maxEvidenceAgeMs < 0) failures.push('release evidence freshness window is invalid')
+      else if (now - parsedTimestamp.getTime() > expectedRelease.maxEvidenceAgeMs) failures.push('release evidence is stale')
+    }
   }
   if (audit.environment === 'production' && !isCommitSha(audit.releaseCommitSha)) failures.push('release commit identity is invalid')
   if (expectedRelease?.releaseCommitSha && audit.releaseCommitSha !== expectedRelease.releaseCommitSha) failures.push('release evidence commit does not match expected release')
@@ -52,7 +57,7 @@ export function verifyPostgresCiReleaseEvidence(
   return { verified, summary: verified ? 'postgres release evidence verified' : 'postgres release evidence verification failed', failures, audit }
 }
 
-export function assertPostgresCiReleaseEvidence(audit: PostgresReleaseAuditRecord, expectedMigrationBaseline?: number, expectedRelease?: { releaseId: string; releaseCommitSha?: string }): PostgresCiReleaseEvidence {
+export function assertPostgresCiReleaseEvidence(audit: PostgresReleaseAuditRecord, expectedMigrationBaseline?: number, expectedRelease?: { releaseId: string; releaseCommitSha?: string; maxEvidenceAgeMs?: number }): PostgresCiReleaseEvidence {
   const evidence = verifyPostgresCiReleaseEvidence(audit, expectedMigrationBaseline, expectedRelease)
   if (!evidence.verified) throw new Error('postgres CI release evidence failed: ' + evidence.failures.join('; '))
   return evidence
