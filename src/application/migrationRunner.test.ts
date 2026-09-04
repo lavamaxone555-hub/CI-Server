@@ -121,6 +121,21 @@ describe('migration runner', () => {
     }
   })
 
+  it('exposes both primary and rollback failures structurally', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'retail-migrations-'))
+    await writeFile(join(directory, '001_first.sql'), 'FIRST')
+    const original = new Error('migration failed')
+    const rollback = new Error('rollback unavailable')
+    try {
+      await runMigrationsTransactionally({ begin: async () => {}, execute: async () => { throw original }, commit: async () => {}, rollback: async () => { throw rollback } }, directory)
+      throw new Error('expected migration to fail')
+    } catch (error) {
+      expect(error).toBeInstanceOf(AggregateError)
+      expect((error as AggregateError).errors).toEqual([original, rollback])
+      expect((error as Error).cause).toBe(original)
+    }
+  })
+
   it('reports rollback failure without hiding the failed migration context', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'retail-migrations-'))
     await writeFile(join(directory, '001_first.sql'), 'FIRST')
