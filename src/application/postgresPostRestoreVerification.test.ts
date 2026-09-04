@@ -9,32 +9,30 @@ describe('PostgreSQL post-restore verification', () => {
         : { rows: [{ name: '001.sql', checksum: 'abc' }, { name: '002.sql', checksum: 'def' }] },
       end: async () => {},
     }
-    await expect(verifyPostgresPostRestore(pool, 2)).resolves.toMatchObject({
-      ready: true,
-      migrationsApplied: 2,
-      checks: ['database reachable', 'migration history meets recovery baseline'],
-    })
+    await expect(verifyPostgresPostRestore(pool, 2)).resolves.toMatchObject({ ready: true, migrationsApplied: 2 })
   })
 
-  it('fails when restored migration history is below the expected baseline', async () => {
+  it('rejects a restored database below the recovery baseline', async () => {
     const pool = {
       query: async (sql: string) => sql === 'SELECT 1'
         ? { rows: [] }
         : { rows: [{ name: '001.sql', checksum: 'abc' }] },
       end: async () => {},
     }
-    await expect(verifyPostgresPostRestore(pool, 2)).resolves.toMatchObject({
-      ready: false,
-      migrationsApplied: 1,
-      readiness: { ready: false, reason: 'migration history is below the expected recovery baseline' },
-    })
+    await expect(verifyPostgresPostRestore(pool, 2)).resolves.toMatchObject({ ready: false, migrationsApplied: 1 })
   })
 
-  it('fails when the restored database is unreachable', async () => {
-    const pool = { query: async () => { throw new Error('connection refused') }, end: async () => {} }
-    await expect(verifyPostgresPostRestore(pool)).resolves.toMatchObject({
+  it('rejects a restored database with migration integrity drift', async () => {
+    const pool = {
+      query: async (sql: string) => sql === 'SELECT 1'
+        ? { rows: [] }
+        : { rows: [{ name: '001.sql', checksum: 'tampered' }] },
+      end: async () => {},
+    }
+    const expected = [{ name: '001.sql', checksum: 'expected' }]
+    await expect(verifyPostgresPostRestore(pool, 1, expected)).resolves.toMatchObject({
       ready: false,
-      checks: ['database unreachable'],
+      readiness: { ready: false, reason: 'migration checksum mismatch: 001.sql' },
     })
   })
 })

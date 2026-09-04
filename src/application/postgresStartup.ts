@@ -46,9 +46,9 @@ export async function startPostgresInfrastructure(
     const expectedMigrations = await loadMigrationSources(migrationsDirectory)
     await verifyPostgresMigrationHistory(pool, expectedMigrations)
 
-    const recovery = await verifyPostgresRecoveryReadiness(pool, config.expectedMigrationBaseline)
+    const recovery = await verifyPostgresRecoveryReadiness(pool, config.expectedMigrationBaseline, expectedMigrations)
     if (!recovery.ready) throw new Error(recovery.readiness.reason ?? 'database recovery verification failed')
-    const postRestore = await verifyPostgresPostRestore(pool, config.expectedMigrationBaseline)
+    const postRestore = await verifyPostgresPostRestore(pool, config.expectedMigrationBaseline, expectedMigrations)
     if (!postRestore.ready) throw new Error(postRestore.readiness.reason ?? 'database post-restore verification failed')
     const evidence = createPostgresDeploymentEvidence({
       migrationsApplied: verification.migrationsApplied,

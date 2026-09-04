@@ -1,6 +1,7 @@
 import { checkPostgresReadiness, type PostgresReadiness } from './postgresReadiness'
 import type { PostgresPool } from './postgresDatabase'
-import { readAppliedPostgresMigrations } from './postgresMigrationHistory'
+import { readAppliedPostgresMigrations, verifyPostgresMigrationHistory } from './postgresMigrationHistory'
+import type { AppliedMigration } from './migrationHistory'
 
 export interface PostgresRecoveryReadiness {
   ready: boolean
@@ -12,6 +13,7 @@ export interface PostgresRecoveryReadiness {
 export async function verifyPostgresRecoveryReadiness(
   pool: PostgresPool,
   expectedMinimumMigrations = 1,
+  expectedMigrations?: readonly AppliedMigration[],
 ): Promise<PostgresRecoveryReadiness> {
   const readiness = await checkPostgresReadiness(pool)
   if (!readiness.ready) {
@@ -28,9 +30,12 @@ export async function verifyPostgresRecoveryReadiness(
         migrationsApplied: migrations.length,
       }
     }
+    if (expectedMigrations !== undefined) {
+      await verifyPostgresMigrationHistory(pool, expectedMigrations)
+    }
     return {
       ready: true,
-      checks: ['database reachable', 'migration history readable', 'recovery baseline verified'],
+      checks: ['database reachable', 'migration history readable', 'recovery baseline verified', ...(expectedMigrations ? ['migration history integrity verified'] : [])],
       readiness,
       migrationsApplied: migrations.length,
     }
