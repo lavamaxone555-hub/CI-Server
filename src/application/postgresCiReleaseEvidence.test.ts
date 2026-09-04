@@ -26,6 +26,13 @@ describe('PostgreSQL CI release evidence', () => {
     expect(verifyPostgresCiReleaseEvidence(legacyAudit)).toMatchObject({ verified: true, failures: [] })
   })
 
+  it('fails closed when audit identity is not bound to the expected release', () => {
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-2', releaseCommitSha: '84a95cf' }).failures)
+      .toContain('release evidence identity does not match expected release')
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', releaseCommitSha: 'aaaaaaa' }).failures)
+      .toContain('release evidence commit does not match expected release')
+  })
+
   it('rejects mismatched explicit and audited baselines', () => {
     expect(verifyPostgresCiReleaseEvidence(audit, 2).failures).toEqual([
       'release evidence baseline does not match audit baseline',

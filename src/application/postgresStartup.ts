@@ -77,7 +77,10 @@ export async function startPostgresInfrastructure(
       releaseId: config.releaseId, createdAt: releaseTimestamp,
       expectedMigrationBaseline: config.expectedMigrationBaseline, releaseCommitSha,
     })
-    assertPostgresCiReleaseEvidence(audit)
+    assertPostgresCiReleaseEvidence(audit, config.expectedMigrationBaseline, {
+      releaseId: config.releaseId,
+      ...(releaseCommitSha ? { releaseCommitSha } : {}),
+    })
     return {
       migrations, readiness: verification.readiness, migrationsApplied: verification.migrationsApplied,
       preflightChecks: preflight.checks, recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks,
