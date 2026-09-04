@@ -7,14 +7,14 @@ export interface DatabaseTransactionSession {
 /** Executes a synchronous application workflow atomically through a real database transaction. */
 export function withDatabaseTransaction<T>(session: DatabaseTransactionSession, operation: () => T): T {
   session.begin()
-  let operationCompleted = false
+  let commitAttempted = false
   try {
     const result = operation()
-    operationCompleted = true
+    commitAttempted = true
     session.commit()
     return result
   } catch (error) {
-    if (operationCompleted) throw error
+    if (commitAttempted) throw error
     try {
       session.rollback()
     } catch (rollbackError) {
