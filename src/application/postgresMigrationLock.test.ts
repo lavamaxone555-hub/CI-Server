@@ -43,6 +43,18 @@ describe('PostgreSQL migration lock', () => {
     expect(release).toHaveBeenCalledOnce()
   })
 
+  it('preserves an unlock failure even when migration work succeeds', async () => {
+    const release = vi.fn()
+    const unlock = new Error('unlock failed')
+    let calls = 0
+    const pool = {
+      connect: async () => ({ query: async () => { calls += 1; if (calls === 2) throw unlock }, release }),
+      query: async () => undefined, end: async () => {},
+    }
+    await expect(withPostgresMigrationLock(pool, async () => 'done')).rejects.toBe(unlock)
+    expect(release).toHaveBeenCalledOnce()
+  })
+
   it('preserves both migration and advisory unlock failures structurally', async () => {
     let calls = 0
     const release = vi.fn()
