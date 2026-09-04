@@ -10,10 +10,10 @@ function hasControlCharacters(value: string): boolean {
 }
 
 function assertValidAppliedMigration(migration: AppliedMigration): void {
-  if (!migration.name.trim() || migration.name.startsWith('/') || migration.name.includes('\\') || migration.name.split('/').includes('..')) {
+  if (migration.name.normalize('NFC').trim() !== migration.name || hasControlCharacters(migration.name) || !migration.name || migration.name.startsWith('/') || migration.name.includes('\\') || migration.name.split('/').includes('..')) {
     throw new Error(`unsafe applied migration name: ${migration.name}`)
   }
-  if (!migration.checksum.trim() || hasControlCharacters(migration.checksum)) {
+  if (migration.checksum.normalize('NFC').trim() !== migration.checksum || hasControlCharacters(migration.checksum) || !migration.checksum) {
     throw new Error(`invalid applied migration checksum: ${migration.name}`)
   }
 }

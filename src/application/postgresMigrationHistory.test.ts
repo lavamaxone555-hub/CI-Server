@@ -58,6 +58,13 @@ describe('PostgreSQL migration history', () => {
     await expect(readAppliedPostgresMigrations(pool)).rejects.toThrow('unsafe applied migration name')
   })
 
+  it('rejects non-canonical or whitespace-padded migration records from the database', async () => {
+    const paddedNamePool = { query: async () => ({ rows: [{ name: ' 001.sql', checksum: 'abc' }] }), end: async () => {} }
+    await expect(readAppliedPostgresMigrations(paddedNamePool)).rejects.toThrow('unsafe applied migration name')
+    const paddedChecksumPool = { query: async () => ({ rows: [{ name: '001.sql', checksum: ' abc ' }] }), end: async () => {} }
+    await expect(readAppliedPostgresMigrations(paddedChecksumPool)).rejects.toThrow('invalid applied migration checksum')
+  })
+
   it('rejects blank or control-character checksums from the database', async () => {
     const blankChecksumPool = {
       query: async () => ({ rows: [{ name: '001.sql', checksum: '   ' }] }),
