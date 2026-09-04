@@ -22,6 +22,13 @@ describe('migration history', () => {
     )).toThrow('duplicate planned migration name: 001.sql')
   })
 
+  it('rejects planned migrations that are not in strict lexical order', () => {
+    expect(() => pendingMigrations([
+      { name: '002.sql', checksum: 'b', sql: 'SECOND' },
+      { name: '001.sql', checksum: 'a', sql: 'FIRST' },
+    ], [])).toThrow('migration plan is not strictly ordered: 001.sql')
+  })
+
   it('rejects conflicting duplicate planned migration checksums', () => {
     expect(() => pendingMigrations(
       [

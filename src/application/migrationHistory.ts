@@ -37,9 +37,14 @@ export function pendingMigrations(
     appliedByName.set(migration.name, migration.checksum)
   }
   const plannedByName = new Map<string, string>()
+  let previousPlannedName: string | undefined
   for (const migration of planned) {
     assertSafeMigrationName(migration.name)
     assertSafeMigrationChecksum(migration.checksum)
+    if (previousPlannedName !== undefined && migration.name <= previousPlannedName) {
+      throw new Error(`migration plan is not strictly ordered: ${migration.name}`)
+    }
+    previousPlannedName = migration.name
     const previousChecksum = plannedByName.get(migration.name)
     if (previousChecksum !== undefined && previousChecksum !== migration.checksum) {
       throw new Error(`duplicate planned migration checksum mismatch: ${migration.name}`)
