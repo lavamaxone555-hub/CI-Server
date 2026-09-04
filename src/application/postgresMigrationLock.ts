@@ -23,7 +23,16 @@ export async function withPostgresMigrationLock<T>(
       try {
         await client.query(`SELECT pg_advisory_unlock(${POSTGRES_MIGRATION_LOCK_ID})`)
       } catch (unlockError) {
-        if (operationError === undefined) throw unlockError
+        if (operationError !== undefined) {
+          const primary = operationError instanceof Error ? operationError : new Error(String(operationError))
+          const unlock = unlockError instanceof Error ? unlockError : new Error(String(unlockError))
+          throw new AggregateError(
+            [primary, unlock],
+            `migration operation failed and advisory unlock failed: ${unlock.message}`,
+            { cause: primary },
+          )
+        }
+        throw unlockError
       }
     }
 
