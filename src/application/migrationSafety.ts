@@ -1,4 +1,14 @@
+function assertSafeMigrationSequence(files: readonly string[]): void {
+  for (const file of files) {
+    if (file.normalize('NFC').trim() !== file || /[\u0000-\u001f\u007f]/.test(file) || !file || file.startsWith('/') || file.includes('\\') || file.split('/').includes('..')) {
+      throw new Error(`unsafe migration name: ${file}`)
+    }
+  }
+}
+
 export function assertMigrationPlan(expected: readonly string[], executed: readonly string[]): void {
+  assertSafeMigrationSequence(expected)
+  assertSafeMigrationSequence(executed)
   if (expected.length !== executed.length || expected.some((file, index) => file !== executed[index])) {
     throw new Error('migration execution plan mismatch')
   }

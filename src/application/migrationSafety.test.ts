@@ -11,6 +11,13 @@ describe('migration safety', () => {
     expect(() => assertMigrationPlan(['001.sql', '002.sql'], ['001.sql', '002.sql'])).not.toThrow()
   })
 
+  it('rejects unsafe migration names in execution plans', () => {
+    expect(() => assertMigrationPlan(['001.sql'], [' ../001.sql']))
+      .toThrow('unsafe migration name:  ../001.sql')
+    expect(() => assertMigrationPlan(['001.sql'], ['001.sql\n']))
+      .toThrow('unsafe migration name: 001.sql\n')
+  })
+
   it('rejects reordered or incomplete execution', () => {
     expect(() => assertMigrationPlan(['001.sql', '002.sql'], ['002.sql', '001.sql']))
       .toThrow('migration execution plan mismatch')
