@@ -63,7 +63,7 @@ export async function runMigrationsTransactionally(
 ): Promise<string[]> {
   const files = await listMigrations(directory)
   await executor.begin()
-  let migrationsCompleted = false
+  let commitAttempted = false
   try {
     for (const file of files) {
       const path = join(directory, file)
@@ -71,11 +71,11 @@ export async function runMigrationsTransactionally(
       if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error(`migration entry changed after validation: ${file}`)
       await executor.execute(await readFile(path, 'utf8'))
     }
-    migrationsCompleted = true
+    commitAttempted = true
     await executor.commit()
     return files
   } catch (error) {
-    if (migrationsCompleted) throw error
+    if (commitAttempted) throw error
     try {
       await executor.rollback()
     } catch (rollbackError) {
