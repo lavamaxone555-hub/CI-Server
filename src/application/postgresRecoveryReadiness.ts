@@ -11,6 +11,7 @@ export interface PostgresRecoveryReadiness {
 
 export async function verifyPostgresRecoveryReadiness(
   pool: PostgresPool,
+  expectedMinimumMigrations = 1,
 ): Promise<PostgresRecoveryReadiness> {
   const readiness = await checkPostgresReadiness(pool)
   if (!readiness.ready) {
@@ -19,9 +20,17 @@ export async function verifyPostgresRecoveryReadiness(
 
   try {
     const migrations = await readAppliedPostgresMigrations(pool)
+    if (migrations.length < expectedMinimumMigrations) {
+      return {
+        ready: false,
+        checks: ['database reachable', 'migration history below recovery baseline'],
+        readiness: { ready: false, reason: 'migration history is below the expected recovery baseline' },
+        migrationsApplied: migrations.length,
+      }
+    }
     return {
       ready: true,
-      checks: ['database reachable', 'migration history readable'],
+      checks: ['database reachable', 'migration history readable', 'recovery baseline verified'],
       readiness,
       migrationsApplied: migrations.length,
     }
