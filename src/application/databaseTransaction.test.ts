@@ -19,6 +19,14 @@ describe('Database transaction boundary', () => {
     expect(calls).toEqual(['begin'])
   })
 
+  it('does not enter the operation when begin fails', () => {
+    let operationCalled = false
+    expect(() => withDatabaseTransaction({
+      begin: () => { throw new Error('begin failed') }, commit: () => {}, rollback: () => {},
+    }, () => { operationCalled = true; return 'ok' })).toThrow('begin failed')
+    expect(operationCalled).toBe(false)
+  })
+
   it('rolls back every persistence step when any step fails', () => {
     const calls: string[] = []
     expect(() => withDatabaseTransaction({ begin: () => calls.push('begin'), commit: () => calls.push('commit'), rollback: () => calls.push('rollback') }, () => {
