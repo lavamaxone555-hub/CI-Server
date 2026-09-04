@@ -12,6 +12,26 @@ describe('migration history', () => {
     )).toEqual([{ name: '002.sql', checksum: 'b', sql: 'SECOND' }])
   })
 
+  it('rejects duplicate planned migration names even when checksums match', () => {
+    expect(() => pendingMigrations(
+      [
+        { name: '001.sql', checksum: 'a', sql: 'FIRST' },
+        { name: '001.sql', checksum: 'a', sql: 'FIRST' },
+      ],
+      [],
+    )).toThrow('duplicate planned migration name: 001.sql')
+  })
+
+  it('rejects conflicting duplicate planned migration checksums', () => {
+    expect(() => pendingMigrations(
+      [
+        { name: '001.sql', checksum: 'a', sql: 'FIRST' },
+        { name: '001.sql', checksum: 'b', sql: 'SECOND' },
+      ],
+      [],
+    )).toThrow('duplicate planned migration checksum mismatch: 001.sql')
+  })
+
   it('rejects conflicting duplicate applied migration history', () => {
     expect(() => pendingMigrations(
       [],
