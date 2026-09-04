@@ -30,10 +30,14 @@ describe.runIf(url)('PostgreSQL CI release evidence integration', () => {
         expectedMigrationBaseline: migrations.length,
         releaseId: 'ci-live-release',
         releaseCommitSha: process.env.GITHUB_SHA ?? '0000000',
+        createdAt: process.env.CI_RELEASE_EVIDENCE_CREATED_AT,
         checks: ['live PostgreSQL reachable', 'live migration history readable'],
       })
 
-      const evidence = assertPostgresCiReleaseEvidence(audit)
+      const evidence = assertPostgresCiReleaseEvidence(audit, migrations.length, {
+        releaseId: 'ci-live-release',
+        releaseCommitSha: process.env.GITHUB_SHA ?? '0000000',
+      })
       const report = createPostgresCiReleaseEvidenceReport(evidence)
       expect(report.status).toBe('passed')
       expect(report.details).toHaveLength(8)
