@@ -10,6 +10,18 @@ describe('PostgreSQL deployment config', () => {
     })
   })
 
+  it('rejects malformed migration boolean configuration', () => {
+    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATE_ON_STARTUP: 'yes' }))
+      .toThrow('DATABASE_MIGRATE_ON_STARTUP')
+    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATION_APPROVED: '1' }))
+      .toThrow('DATABASE_MIGRATION_APPROVED')
+  })
+
+  it('canonicalizes migration boolean configuration', () => {
+    expect(loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATE_ON_STARTUP: '  FALSE  ' }).migrationOnStartup).toBe(false)
+    expect(loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATION_APPROVED: '  TRUE  ' }).migrationOnStartup).toBe(true)
+  })
+
   it('requires SSL, release identity, and commit identity in production', () => {
     expect(() => loadPostgresDeploymentConfig({ ...base, NODE_ENV: 'production' })).toThrow('DATABASE_SSL=true')
     expect(() => loadPostgresDeploymentConfig({ ...base, NODE_ENV: 'production', DATABASE_SSL: 'true' })).toThrow('DATABASE_MIGRATION_APPROVED=true')

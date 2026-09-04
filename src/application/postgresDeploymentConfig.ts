@@ -35,8 +35,16 @@ export function loadPostgresDeploymentConfig(
   if (environment === 'production' && !database.ssl) {
     throw new Error('DATABASE_SSL=true is required in production')
   }
-  const migrationOnStartup = env.DATABASE_MIGRATE_ON_STARTUP !== 'false'
-  if (environment === 'production' && migrationOnStartup && env.DATABASE_MIGRATION_APPROVED !== 'true') {
+  const rawMigrationOnStartup = env.DATABASE_MIGRATE_ON_STARTUP?.normalize('NFC').trim().toLowerCase()
+  if (rawMigrationOnStartup !== undefined && rawMigrationOnStartup !== '' && rawMigrationOnStartup !== 'true' && rawMigrationOnStartup !== 'false') {
+    throw new Error('DATABASE_MIGRATE_ON_STARTUP must be true or false')
+  }
+  const migrationOnStartup = rawMigrationOnStartup !== 'false'
+  const rawMigrationApproved = env.DATABASE_MIGRATION_APPROVED?.normalize('NFC').trim().toLowerCase()
+  if (rawMigrationApproved !== undefined && rawMigrationApproved !== '' && rawMigrationApproved !== 'true' && rawMigrationApproved !== 'false') {
+    throw new Error('DATABASE_MIGRATION_APPROVED must be true or false')
+  }
+  if (environment === 'production' && migrationOnStartup && rawMigrationApproved !== 'true') {
     throw new Error('DATABASE_MIGRATION_APPROVED=true is required for production startup migrations')
   }
   const releaseId = normalizeReleaseId(env.RELEASE_ID)
