@@ -54,6 +54,17 @@ describe('Database checkout adapter', () => {
     expect(calls).toEqual(['begin', 'sale', 'commit'])
   })
 
+  it('uses the shared transaction boundary semantics for rollback failures', () => {
+    const original = new Error('db failed')
+    const session: DatabaseCheckoutSession = {
+      begin: () => {}, commit: () => {}, rollback: () => { throw new Error('rollback unavailable') },
+      insertSale: () => { throw original }, insertInventoryMovement: (x) => x,
+      insertPayment: (x) => x, updateImei: (x) => x,
+    }
+    expect(() => persistCheckout(session, { sale, movements: [], payments: [], imeiUnits: [] }))
+      .toThrow('database transaction failed and rollback failed: rollback unavailable')
+  })
+
   it('does not roll back after a commit failure because checkout outcome is unknown', () => {
     const calls: string[] = []
     const session: DatabaseCheckoutSession = {

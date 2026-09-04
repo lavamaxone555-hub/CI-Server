@@ -2,7 +2,7 @@ import type { InventoryMovement } from '../domain/inventory'
 import type { Payment } from '../domain/payment'
 import type { ImeiUnit } from '../domain/imei'
 import type { Sale } from '../domain/retail'
-import type { DatabaseTransactionSession } from './databaseTransaction'
+import { withDatabaseTransaction, type DatabaseTransactionSession } from './databaseTransaction'
 
 export interface DatabaseCheckoutSession extends DatabaseTransactionSession {
   insertSale(sale: Sale): Sale
@@ -16,24 +16,11 @@ export function persistCheckout(
   session: DatabaseCheckoutSession,
   data: { sale: Sale; movements: InventoryMovement[]; payments: Payment[]; imeiUnits: ImeiUnit[] },
 ) {
-  session.begin()
-  let commitAttempted = false
-  try {
+  return withDatabaseTransaction(session, () => {
     const sale = session.insertSale(data.sale)
     const movements = data.movements.map((movement) => session.insertInventoryMovement(movement))
     const payments = data.payments.map((payment) => session.insertPayment(payment))
     const imeiUnits = data.imeiUnits.map((unit) => session.updateImei(unit))
-    commitAttempted = true
-    session.commit()
     return { sale, movements, payments, imeiUnits }
-  } catch (error) {
-    if (commitAttempted) throw error
-    try {
-      session.rollback()
-    } catch (rollbackError) {
-      const message = rollbackError instanceof Error ? rollbackError.message : 'unknown rollback failure'
-      throw new Error(`checkout persistence failed and rollback failed: ${message}`, { cause: error })
-    }
-    throw error
-  }
+  })
 }
