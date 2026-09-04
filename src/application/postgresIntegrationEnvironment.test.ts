@@ -9,6 +9,10 @@ describe('PostgreSQL integration environment', () => {
     expect(hasPostgresIntegrationEnvironment({ POSTGRES_INTEGRATION_URL: 'postgresql://localhost/test' })).toBe(true)
   })
 
+  it('does not treat whitespace-only integration URLs as configured', () => {
+    expect(hasPostgresIntegrationEnvironment({ POSTGRES_INTEGRATION_URL: '   ' })).toBe(false)
+  })
+
   it('does not run live integration tests without an explicit URL', () => {
     expect(hasPostgresIntegrationEnvironment({})).toBe(false)
   })
@@ -22,6 +26,13 @@ describe('PostgreSQL integration environment', () => {
       DATABASE_SSL: 'true',
       NODE_ENV: 'test',
     })
+  })
+
+  it('canonicalizes and validates live integration configuration', () => {
+    expect(loadPostgresIntegrationEnvironment({ POSTGRES_INTEGRATION_URL: '  postgresql://localhost/test  ', POSTGRES_INTEGRATION_SSL: ' TRUE ' }))
+      .toEqual({ DATABASE_URL: 'postgresql://localhost/test', DATABASE_SSL: 'true', NODE_ENV: 'test' })
+    expect(() => loadPostgresIntegrationEnvironment({ POSTGRES_INTEGRATION_URL: 'postgresql://localhost/test', POSTGRES_INTEGRATION_SSL: 'yes' }))
+      .toThrow('POSTGRES_INTEGRATION_SSL must be true or false')
   })
 
   it('fails clearly when live integration configuration is missing', () => {
