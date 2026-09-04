@@ -24,6 +24,9 @@ export function pendingMigrations(
     if (previousChecksum !== undefined && previousChecksum !== migration.checksum) {
       throw new Error(`duplicate applied migration checksum mismatch: ${migration.name}`)
     }
+    if (previousChecksum !== undefined) {
+      throw new Error(`duplicate applied migration name: ${migration.name}`)
+    }
     appliedByName.set(migration.name, migration.checksum)
   }
   const plannedByName = new Map<string, string>()
