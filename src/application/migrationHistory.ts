@@ -41,10 +41,6 @@ export function pendingMigrations(
   for (const migration of planned) {
     assertSafeMigrationName(migration.name)
     assertSafeMigrationChecksum(migration.checksum)
-    if (previousPlannedName !== undefined && migration.name <= previousPlannedName) {
-      throw new Error(`migration plan is not strictly ordered: ${migration.name}`)
-    }
-    previousPlannedName = migration.name
     const previousChecksum = plannedByName.get(migration.name)
     if (previousChecksum !== undefined && previousChecksum !== migration.checksum) {
       throw new Error(`duplicate planned migration checksum mismatch: ${migration.name}`)
@@ -52,6 +48,10 @@ export function pendingMigrations(
     if (previousChecksum !== undefined) {
       throw new Error(`duplicate planned migration name: ${migration.name}`)
     }
+    if (previousPlannedName !== undefined && migration.name <= previousPlannedName) {
+      throw new Error(`migration plan is not strictly ordered: ${migration.name}`)
+    }
+    previousPlannedName = migration.name
     plannedByName.set(migration.name, migration.checksum)
     const checksum = appliedByName.get(migration.name)
     if (checksum !== undefined && checksum !== migration.checksum) {
