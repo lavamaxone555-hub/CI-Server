@@ -26,6 +26,13 @@ describe('PostgreSQL deployment config', () => {
     expect(config.releaseCommitSha).toBe('84a95cf')
   })
 
+  it('rejects unsafe or unbounded migration baselines', () => {
+    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_EXPECTED_MIGRATION_BASELINE: '1000001' }))
+      .toThrow('DATABASE_EXPECTED_MIGRATION_BASELINE')
+    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_EXPECTED_MIGRATION_BASELINE: String(Number.MAX_SAFE_INTEGER + 1) }))
+      .toThrow('DATABASE_EXPECTED_MIGRATION_BASELINE')
+  })
+
   it('accepts a complete production deployment identity', () => {
     expect(loadPostgresDeploymentConfig({
       ...base, NODE_ENV: 'production', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true',

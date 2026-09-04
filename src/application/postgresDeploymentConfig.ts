@@ -43,9 +43,9 @@ export function loadPostgresDeploymentConfig(
   if (environment === 'production' && releaseId === 'local') {
     throw new Error('RELEASE_ID is required in production')
   }
-  const rawBaseline = env.DATABASE_EXPECTED_MIGRATION_BASELINE
-  const expectedMigrationBaseline = rawBaseline === undefined ? 1 : Number(rawBaseline)
-  if (!Number.isInteger(expectedMigrationBaseline) || expectedMigrationBaseline < 1) {
+  const rawBaseline = env.DATABASE_EXPECTED_MIGRATION_BASELINE?.normalize('NFC').trim()
+  const expectedMigrationBaseline = rawBaseline === undefined || rawBaseline === '' ? 1 : Number(rawBaseline)
+  if (!Number.isSafeInteger(expectedMigrationBaseline) || expectedMigrationBaseline < 1 || expectedMigrationBaseline > 1_000_000) {
     throw new Error('DATABASE_EXPECTED_MIGRATION_BASELINE must be a positive integer')
   }
   const releaseCommitSha = env.RELEASE_COMMIT_SHA?.normalize('NFC').trim().toLowerCase()
