@@ -87,7 +87,10 @@ export function verifyPostgresCiReleaseEvidence(
     if (timestampMs > now && timestampMs - now > futureSkewMs) failures.push('release timestamp is too far in the future')
     if (expectedRelease?.maxEvidenceAgeMs !== undefined) {
       if (!Number.isSafeInteger(expectedRelease.maxEvidenceAgeMs) || expectedRelease.maxEvidenceAgeMs < 0 || expectedRelease.maxEvidenceAgeMs > 365 * 24 * 60 * 60 * 1000) failures.push('release evidence freshness window is invalid')
-      else if (now - parsedTimestamp.getTime() > expectedRelease.maxEvidenceAgeMs) failures.push('release evidence is stale')
+      else {
+        const evidenceAgeMs = now - timestampMs
+        if (evidenceAgeMs > expectedRelease.maxEvidenceAgeMs) failures.push('release evidence is stale')
+      }
     }
   }
   const auditCommitSha = audit.releaseCommitSha === undefined ? undefined : canonicalizeCommitSha(audit.releaseCommitSha)

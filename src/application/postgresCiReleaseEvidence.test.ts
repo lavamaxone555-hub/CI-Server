@@ -110,6 +110,12 @@ describe('PostgreSQL CI release evidence', () => {
       .not.toContain('release timestamp is too far in the future')
   })
 
+  it('accepts evidence exactly at the required freshness boundary', () => {
+    const now = Date.parse('2026-09-03T00:00:00.001Z')
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', maxEvidenceAgeMs: 1 }, now))
+      .toMatchObject({ verified: true })
+  })
+
   it('evaluates evidence freshness against an injected deterministic clock', () => {
     const now = Date.parse('2026-09-03T00:00:00.002Z')
     expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', maxEvidenceAgeMs: 1 }, now).failures)
