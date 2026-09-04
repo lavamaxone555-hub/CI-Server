@@ -7,6 +7,12 @@ export interface PlannedMigration extends AppliedMigration {
   sql: string
 }
 
+function assertSafeMigrationChecksum(checksum: string): void {
+  if (checksum.normalize('NFC').trim() !== checksum || /[\u0000-\u001f\u007f]/.test(checksum) || !checksum) {
+    throw new Error(`invalid migration checksum: ${checksum}`)
+  }
+}
+
 function assertSafeMigrationName(name: string): void {
   if (name.normalize('NFC').trim() !== name || /[\u0000-\u001f\u007f]/.test(name) || !name || name.startsWith('/') || name.includes('\\') || name.split('/').includes('..')) {
     throw new Error(`unsafe migration name: ${name}`)
@@ -20,6 +26,7 @@ export function pendingMigrations(
   const appliedByName = new Map<string, string>()
   for (const migration of applied) {
     assertSafeMigrationName(migration.name)
+    assertSafeMigrationChecksum(migration.checksum)
     const previousChecksum = appliedByName.get(migration.name)
     if (previousChecksum !== undefined && previousChecksum !== migration.checksum) {
       throw new Error(`duplicate applied migration checksum mismatch: ${migration.name}`)
@@ -32,6 +39,7 @@ export function pendingMigrations(
   const plannedByName = new Map<string, string>()
   for (const migration of planned) {
     assertSafeMigrationName(migration.name)
+    assertSafeMigrationChecksum(migration.checksum)
     const previousChecksum = plannedByName.get(migration.name)
     if (previousChecksum !== undefined && previousChecksum !== migration.checksum) {
       throw new Error(`duplicate planned migration checksum mismatch: ${migration.name}`)

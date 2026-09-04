@@ -53,6 +53,15 @@ describe('migration history', () => {
     )).toThrow('migration checksum mismatch: 001.sql')
   })
 
+  it('rejects non-canonical, blank, or control-character migration checksums', () => {
+    expect(() => pendingMigrations([{ name: '001.sql', checksum: ' abc ', sql: 'SELECT 1' }], []))
+      .toThrow('invalid migration checksum:  abc ')
+    expect(() => pendingMigrations([{ name: '001.sql', checksum: '', sql: 'SELECT 1' }], []))
+      .toThrow('invalid migration checksum: ')
+    expect(() => pendingMigrations([], [{ name: '001.sql', checksum: 'abc\n' }]))
+      .toThrow('invalid migration checksum: abc\n')
+  })
+
   it('rejects non-canonical or control-character migration names', () => {
     expect(() => pendingMigrations([{ name: ' 001.sql', checksum: 'a', sql: 'SELECT 1' }], []))
       .toThrow('unsafe migration name:  001.sql')
