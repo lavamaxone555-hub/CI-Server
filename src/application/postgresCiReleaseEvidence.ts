@@ -33,7 +33,11 @@ export function verifyPostgresCiReleaseEvidence(
   else if (hasControlCharacters(audit.releaseId)) failures.push('release identity contains control characters')
   if (expectedRelease && audit.releaseId !== expectedRelease.releaseId) failures.push('release evidence identity does not match expected release')
   if (!audit.createdAt || Number.isNaN(Date.parse(audit.createdAt))) failures.push('release timestamp is invalid')
-  else if (new Date(audit.createdAt).toISOString() !== audit.createdAt) failures.push('release timestamp is not canonical')
+  else {
+    const parsedTimestamp = new Date(audit.createdAt)
+    if (parsedTimestamp.toISOString() !== audit.createdAt) failures.push('release timestamp is not canonical')
+    if (parsedTimestamp.getTime() > Date.now() + 5 * 60 * 1000) failures.push('release timestamp is too far in the future')
+  }
   if (audit.environment === 'production' && !isCommitSha(audit.releaseCommitSha)) failures.push('release commit identity is invalid')
   if (expectedRelease?.releaseCommitSha && audit.releaseCommitSha !== expectedRelease.releaseCommitSha) failures.push('release evidence commit does not match expected release')
   if (!Number.isInteger(audit.migrationsApplied) || audit.migrationsApplied < 0) failures.push('applied migration count is invalid')

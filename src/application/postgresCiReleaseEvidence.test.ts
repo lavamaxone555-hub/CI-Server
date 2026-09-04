@@ -39,6 +39,11 @@ describe('PostgreSQL CI release evidence', () => {
     ])
   })
 
+  it('rejects audit timestamps too far in the future', () => {
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, createdAt: '2099-01-01T00:00:00.000Z' }).failures)
+      .toContain('release timestamp is too far in the future')
+  })
+
   it('rejects non-canonical timestamps to prevent ambiguous audit evidence', () => {
     expect(verifyPostgresCiReleaseEvidence({ ...audit, createdAt: '2026-09-03T00:00:00Z' }).failures)
       .toContain('release timestamp is not canonical')
