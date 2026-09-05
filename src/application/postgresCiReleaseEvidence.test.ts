@@ -110,6 +110,13 @@ describe('PostgreSQL CI release evidence', () => {
       .toContain('verification clock is invalid')
   })
 
+  it('enforces an explicit fail-closed future evidence skew contract', () => {
+    const now = Date.parse('2026-09-03T00:00:00.000Z')
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, createdAt: '2026-09-03T00:00:00.001Z' }, 3, { releaseId: 'release-1', maxFutureSkewMs: 0 }, now).failures).toContain('release timestamp is too far in the future')
+    expect(verifyPostgresCiReleaseEvidence({ ...audit, createdAt: '2026-09-03T00:00:00.000Z' }, 3, { releaseId: 'release-1', maxFutureSkewMs: 0 }, now)).toMatchObject({ verified: true })
+    expect(verifyPostgresCiReleaseEvidence(audit, 3, { releaseId: 'release-1', maxFutureSkewMs: -1 }, now).failures).toContain('release evidence future skew window is invalid')
+  })
+
   it('allows evidence timestamps within the bounded future clock skew', () => {
     const now = Date.parse('2026-09-03T00:00:00.000Z')
     expect(verifyPostgresCiReleaseEvidence({ ...audit, createdAt: '2026-09-03T00:05:00.000Z' }, 3, { releaseId: 'release-1' }, now).failures)
