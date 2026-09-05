@@ -22,6 +22,7 @@ export interface PostgresReleasePolicyInput {
   maxCommitEvidenceSkewMs?: number
   releaseCommitShaTimestamp?: string
   maxCommitShaEvidenceSkewMs?: number
+  maxReleaseReadinessSkewMs?: number
 }
 
 export interface PostgresReleasePolicy {
@@ -73,6 +74,7 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
   if (input.environment === 'production' && (!input.releaseTimestamp || Number.isNaN(Date.parse(input.releaseTimestamp)))) reasons.push('production release timestamp is invalid')
   if (input.environment === 'production' && input.maxReleaseAgeMs !== undefined && (!Number.isFinite(input.maxReleaseAgeMs) || input.maxReleaseAgeMs <= 0)) reasons.push('production release freshness threshold is invalid')
   if (input.environment === 'production' && input.maxEvidenceSkewMs !== undefined && (!Number.isFinite(input.maxEvidenceSkewMs) || input.maxEvidenceSkewMs < 0)) reasons.push('production evidence skew threshold is invalid')
+  if (input.environment === 'production' && input.maxReleaseReadinessSkewMs !== undefined && (!Number.isFinite(input.maxReleaseReadinessSkewMs) || input.maxReleaseReadinessSkewMs < 0)) reasons.push('production release-readiness skew threshold is invalid')
   if (input.environment === 'production' && input.releaseCommitTimestamp !== undefined && parseTimestamp(input.releaseCommitTimestamp) === undefined) reasons.push('production release commit timestamp is invalid')
   if (input.environment === 'production' && input.maxCommitEvidenceSkewMs !== undefined && (!Number.isFinite(input.maxCommitEvidenceSkewMs) || input.maxCommitEvidenceSkewMs < 0)) reasons.push('production commit evidence skew threshold is invalid')
   if (input.environment === 'production' && input.releaseCommitShaTimestamp !== undefined && parseTimestamp(input.releaseCommitShaTimestamp) === undefined) reasons.push('production release commit SHA timestamp is invalid')
@@ -128,6 +130,7 @@ export function evaluatePostgresReleasePolicy(input: PostgresReleasePolicyInput)
     const readinessTimestamp = parseTimestamp(input.readinessCheckedAt)
     if (releaseTimestamp !== undefined && readinessTimestamp !== undefined && readinessTimestamp < releaseTimestamp) reasons.push('production readiness evidence predates the release')
     if (releaseTimestamp !== undefined && readinessTimestamp !== undefined && input.maxEvidenceSkewMs !== undefined && readinessTimestamp - releaseTimestamp > input.maxEvidenceSkewMs) reasons.push('production readiness evidence exceeds the allowed release skew')
+    if (releaseTimestamp !== undefined && readinessTimestamp !== undefined && input.maxReleaseReadinessSkewMs !== undefined && Math.abs(readinessTimestamp - releaseTimestamp) > input.maxReleaseReadinessSkewMs) reasons.push('production release and readiness evidence exceed the allowed absolute skew')
   }
 
   return { releasable: reasons.length === 0, reasons }

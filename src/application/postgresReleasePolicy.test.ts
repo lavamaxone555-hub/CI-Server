@@ -80,8 +80,14 @@ describe('PostgreSQL release policy', () => {
   it('allows readiness evidence exactly at the release skew boundary', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:00:05.000Z', maxEvidenceSkewMs: 5_000 })).toEqual({ releasable: true, reasons: [] })
   })
+  it('enforces absolute release-readiness skew in both temporal directions', () => {
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:00:10.000Z', maxReleaseReadinessSkewMs: 5_000 }).reasons).toContain('production release and readiness evidence exceed the allowed absolute skew')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-02T23:59:50.000Z', maxReleaseReadinessSkewMs: 5_000 }).reasons).toContain('production release and readiness evidence exceed the allowed absolute skew')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:00:05.000Z', maxReleaseReadinessSkewMs: 5_000 })).toEqual({ releasable: true, reasons: [] })
+  })
   it('blocks invalid production evidence skew threshold', () => {
     expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxEvidenceSkewMs: -1 }).reasons).toContain('production evidence skew threshold is invalid')
+    expect(evaluatePostgresReleasePolicy({ ...productionRelease, maxReleaseReadinessSkewMs: -1 }).reasons).toContain('production release-readiness skew threshold is invalid')
   })
   it('blocks readiness evidence that predates the release', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-02T23:59:59.999Z' }).reasons).toContain('production readiness evidence predates the release'))
   it('accepts readiness evidence collected after the release', () => expect(evaluatePostgresReleasePolicy({ ...productionRelease, readinessCheckedAt: '2026-09-03T00:00:01.000Z' })).toEqual({ releasable: true, reasons: [] }))
