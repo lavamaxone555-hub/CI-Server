@@ -1,5 +1,3 @@
-BEGIN;
-
 CREATE TABLE IF NOT EXISTS sales (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL,
@@ -40,5 +38,3 @@ CREATE TABLE IF NOT EXISTS imei_units (
   status TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_imei_product_branch_status ON imei_units (product_id, branch_id, status);
-
-COMMIT;

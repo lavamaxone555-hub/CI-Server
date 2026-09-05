@@ -24,6 +24,17 @@ describe('PostgreSQL integration boundary', () => {
     ])
   })
 
+  it('keeps transaction control at the runner boundary when migration SQL contains no transaction statements', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'postgres-migrations-'))
+    await writeFile(join(directory, '001_schema.sql'), 'CREATE TABLE demo (id TEXT PRIMARY KEY)')
+    const statements: string[] = []
+    await runMigrationsTransactionally(
+      createPostgresMigrationExecutor({ query: async (sql) => { statements.push(sql) } }),
+      directory,
+    )
+    expect(statements.filter((sql) => /^(BEGIN|COMMIT|ROLLBACK)$/i.test(sql.trim()))).toEqual(['BEGIN', 'COMMIT'])
+  })
+
   it('does not roll back after a commit attempt fails through the PostgreSQL executor', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'postgres-migrations-'))
     await writeFile(join(directory, '001_schema.sql'), 'CREATE TABLE demo (id TEXT PRIMARY KEY)')

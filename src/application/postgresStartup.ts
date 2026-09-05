@@ -14,10 +14,12 @@ import { createPostgresDeploymentEvidence } from './postgresDeploymentEvidence'
 import { evaluatePostgresReleasePolicy } from './postgresReleasePolicy'
 import { createPostgresReleaseAuditRecord } from './postgresReleaseAuditTrail'
 import { assertPostgresCiReleaseEvidence } from './postgresCiReleaseEvidence'
+import { verifyPostgresHealth } from './postgresHealthCheck'
 
 export interface PostgresStartupResult {
   migrations: string[]
   readiness: PostgresReadiness
+  healthLatencyMs: number
   migrationsApplied: number
   preflightChecks: string[]
   recoveryChecks: string[]
@@ -32,9 +34,20 @@ export interface PostgresStartupResult {
   releaseCommitSha?: string
 }
 
+function loadHealthLatencyLimit(env: Record<string, string | undefined>): number | undefined {
+  const raw = env.DATABASE_HEALTH_MAX_LATENCY_MS?.trim()
+  if (raw === undefined || raw === '') return undefined
+  const value = Number(raw)
+  if (!Number.isSafeInteger(value) || value < 0 || value > 300_000) {
+    throw new Error('DATABASE_HEALTH_MAX_LATENCY_MS must be a non-negative integer')
+  }
+  return value
+}
+
 export async function startPostgresInfrastructure(
   env: Record<string, string | undefined> = process.env,
 ): Promise<PostgresStartupResult> {
+  const healthLatencyLimit = loadHealthLatencyLimit(env)
   const preflight = verifyPostgresDeploymentPreflight(env)
   if (!preflight.ready) throw new Error('database deployment preflight failed')
   const config = loadPostgresDeploymentConfig(env)
@@ -42,6 +55,7 @@ export async function startPostgresInfrastructure(
   const migrations = config.migrationOnStartup ? await initializePostgresDatabase(env, migrationsDirectory) : []
   const pool = createPostgresPool(env)
   try {
+    const health = await verifyPostgresHealth(pool, { maxLatencyMs: healthLatencyLimit })
     const verification = await verifyPostgresDeployment(pool, config.expectedMigrationBaseline)
     if (!verification.ready) throw new Error(verification.readiness.reason ?? 'database deployment verification failed')
 
@@ -82,7 +96,8 @@ export async function startPostgresInfrastructure(
       ...(releaseCommitSha ? { releaseCommitSha } : {}),
     })
     return {
-      migrations, readiness: verification.readiness, migrationsApplied: verification.migrationsApplied,
+      migrations, readiness: verification.readiness, healthLatencyMs: health.latencyMs,
+      migrationsApplied: verification.migrationsApplied,
       preflightChecks: preflight.checks, recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks,
       rollbackChecks: rollback.checks,
       releaseEvidenceReady: evidence.ready, releaseApproved: policy.releasable,
