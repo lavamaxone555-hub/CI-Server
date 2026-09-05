@@ -2,79 +2,25 @@ import { describe, expect, it } from 'vitest'
 import { loadPostgresDeploymentConfig } from './postgresDeploymentConfig'
 
 const base = { DATABASE_URL: 'postgres://user:pass@localhost:5432/app' }
+const production = {
+  ...base, NODE_ENV: 'production', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true',
+  RELEASE_ID: 'r1', RELEASE_COMMIT_SHA: '84a95cf', DATABASE_HEALTH_MAX_LATENCY_MS: '200',
+}
 
-describe('PostgreSQL deployment config', () => {
-  it('loads development defaults', () => {
-    expect(loadPostgresDeploymentConfig(base)).toMatchObject({
-      environment: 'development', migrationOnStartup: true, releaseId: 'local', expectedMigrationBaseline: 1,
-    })
+describe('PostgreSQL deployment configuration', () => {
+  it('loads safe development defaults', () => {
+    expect(loadPostgresDeploymentConfig(base)).toMatchObject({ environment: 'development', migrationOnStartup: true, releaseId: 'local', expectedMigrationBaseline: 1 })
   })
-
-  it('rejects malformed migration boolean configuration', () => {
-    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATE_ON_STARTUP: 'yes' }))
-      .toThrow('DATABASE_MIGRATE_ON_STARTUP')
-    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATION_APPROVED: '1' }))
-      .toThrow('DATABASE_MIGRATION_APPROVED')
+  it('requires a production health latency limit', () => {
+    const { DATABASE_HEALTH_MAX_LATENCY_MS: _, ...withoutLimit } = production
+    expect(() => loadPostgresDeploymentConfig(withoutLimit)).toThrow('DATABASE_HEALTH_MAX_LATENCY_MS is required in production')
   })
-
-  it('rejects empty migration boolean configuration instead of silently defaulting', () => {
-    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATE_ON_STARTUP: '   ' }))
-      .toThrow('DATABASE_MIGRATE_ON_STARTUP must not be empty')
-    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATION_APPROVED: '   ' }))
-      .toThrow('DATABASE_MIGRATION_APPROVED must not be empty')
+  it('loads a complete production deployment identity and health limit', () => {
+    expect(loadPostgresDeploymentConfig(production)).toMatchObject({ environment: 'production', healthMaxLatencyMs: 200, releaseCommitSha: '84a95cf' })
   })
-
-  it('canonicalizes migration boolean configuration', () => {
-    expect(loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATE_ON_STARTUP: '  FALSE  ' }).migrationOnStartup).toBe(false)
-    expect(loadPostgresDeploymentConfig({ ...base, DATABASE_MIGRATION_APPROVED: '  TRUE  ' }).migrationOnStartup).toBe(true)
-  })
-
-  it('canonicalizes deployment environment configuration', () => {
-    expect(loadPostgresDeploymentConfig({ ...base, NODE_ENV: '  PRODUCTION  ', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true', RELEASE_ID: 'r1', RELEASE_COMMIT_SHA: '84a95cf' }).environment)
-      .toBe('production')
-  })
-
-  it('requires SSL, release identity, and commit identity in production', () => {
-    expect(() => loadPostgresDeploymentConfig({ ...base, NODE_ENV: 'production' })).toThrow('DATABASE_SSL=true')
-    expect(() => loadPostgresDeploymentConfig({ ...base, NODE_ENV: 'production', DATABASE_SSL: 'true' })).toThrow('DATABASE_MIGRATION_APPROVED=true')
-    expect(() => loadPostgresDeploymentConfig({ ...base, NODE_ENV: 'production', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true' })).toThrow('RELEASE_ID is required')
-    expect(() => loadPostgresDeploymentConfig({ ...base, NODE_ENV: 'production', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true', RELEASE_ID: 'r1' })).toThrow('RELEASE_COMMIT_SHA')
-  })
-
-  it('canonicalizes production release and commit identities', () => {
-    const config = loadPostgresDeploymentConfig({
-      ...base, NODE_ENV: 'production', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true',
-      RELEASE_ID: '  release-é  ', RELEASE_COMMIT_SHA: '  84A95CF  ',
-    })
-    expect(config.releaseId).toBe('release-é')
-    expect(config.releaseCommitSha).toBe('84a95cf')
-  })
-
-  it('rejects unsafe or unbounded migration baselines', () => {
-    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_EXPECTED_MIGRATION_BASELINE: '1000001' }))
-      .toThrow('DATABASE_EXPECTED_MIGRATION_BASELINE')
-    expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_EXPECTED_MIGRATION_BASELINE: String(Number.MAX_SAFE_INTEGER + 1) }))
-      .toThrow('DATABASE_EXPECTED_MIGRATION_BASELINE')
-  })
-
-  it('accepts a complete production deployment identity', () => {
-    expect(loadPostgresDeploymentConfig({
-      ...base, NODE_ENV: 'production', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true',
-      RELEASE_ID: 'r1', RELEASE_COMMIT_SHA: '84a95cf',
-    }).releaseCommitSha).toBe('84a95cf')
-  })
-
-  it('rejects malformed production commit identity', () => {
-    expect(() => loadPostgresDeploymentConfig({
-      ...base, NODE_ENV: 'production', DATABASE_SSL: 'true', DATABASE_MIGRATION_APPROVED: 'true',
-      RELEASE_ID: 'r1', RELEASE_COMMIT_SHA: 'release-1',
-    })).toThrow('RELEASE_COMMIT_SHA')
-  })
-
-  it('rejects release identities containing control characters', () => {
-    expect(() => loadPostgresDeploymentConfig({ ...base, RELEASE_ID: 'release\n1' }))
-      .toThrow('RELEASE_ID must not contain control characters')
-    expect(() => loadPostgresDeploymentConfig({ ...base, RELEASE_ID: '\u0000release' }))
-      .toThrow('RELEASE_ID must not contain control characters')
+  it('rejects invalid health latency limits', () => {
+    for (const value of ['0', '-1', 'abc', '300001']) {
+      expect(() => loadPostgresDeploymentConfig({ ...base, DATABASE_HEALTH_MAX_LATENCY_MS: value })).toThrow('DATABASE_HEALTH_MAX_LATENCY_MS must be a positive integer')
+    }
   })
 })

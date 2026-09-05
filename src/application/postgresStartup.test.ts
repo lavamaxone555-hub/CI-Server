@@ -13,9 +13,10 @@ describe('PostgreSQL startup contract', () => {
     expect(readiness).toEqual({ ready: false, reason: 'offline' })
   })
 
-  it('rejects an invalid health latency limit before opening infrastructure', async () => {
-    await expect(startPostgresInfrastructure({ DATABASE_HEALTH_MAX_LATENCY_MS: '-1' })).rejects.toThrow(
-      'DATABASE_HEALTH_MAX_LATENCY_MS must be a non-negative integer',
-    )
+  it('rejects an invalid health latency limit through configuration validation', async () => {
+    await expect(startPostgresInfrastructure({
+      DATABASE_URL: 'postgresql://user:password@localhost:5432/app',
+      DATABASE_HEALTH_MAX_LATENCY_MS: '-1',
+    })).rejects.toThrow('DATABASE_HEALTH_MAX_LATENCY_MS must be a positive integer')
   })
 })

@@ -34,20 +34,7 @@ export interface PostgresStartupResult {
   releaseCommitSha?: string
 }
 
-function loadHealthLatencyLimit(env: Record<string, string | undefined>): number | undefined {
-  const raw = env.DATABASE_HEALTH_MAX_LATENCY_MS?.trim()
-  if (raw === undefined || raw === '') return undefined
-  const value = Number(raw)
-  if (!Number.isSafeInteger(value) || value < 0 || value > 300_000) {
-    throw new Error('DATABASE_HEALTH_MAX_LATENCY_MS must be a non-negative integer')
-  }
-  return value
-}
-
-export async function startPostgresInfrastructure(
-  env: Record<string, string | undefined> = process.env,
-): Promise<PostgresStartupResult> {
-  const healthLatencyLimit = loadHealthLatencyLimit(env)
+export async function startPostgresInfrastructure(env: Record<string, string | undefined> = process.env): Promise<PostgresStartupResult> {
   const preflight = verifyPostgresDeploymentPreflight(env)
   if (!preflight.ready) throw new Error('database deployment preflight failed')
   const config = loadPostgresDeploymentConfig(env)
@@ -55,7 +42,7 @@ export async function startPostgresInfrastructure(
   const migrations = config.migrationOnStartup ? await initializePostgresDatabase(env, migrationsDirectory) : []
   const pool = createPostgresPool(env)
   try {
-    const health = await verifyPostgresHealth(pool, { maxLatencyMs: healthLatencyLimit })
+    const health = await verifyPostgresHealth(pool, { maxLatencyMs: config.healthMaxLatencyMs })
     const verification = await verifyPostgresDeployment(pool, config.expectedMigrationBaseline)
     if (!verification.ready) throw new Error(verification.readiness.reason ?? 'database deployment verification failed')
 
@@ -68,41 +55,40 @@ export async function startPostgresInfrastructure(
     if (!postRestore.ready) throw new Error(postRestore.readiness.reason ?? 'database post-restore verification failed')
     const rollback = verifyPostgresRollbackReadiness({ rollbackChecks: env.DATABASE_ROLLBACK_CHECKS?.split(',') })
     if (!rollback.ready) throw new Error('database rollback readiness verification failed')
+
     const evidence = createPostgresDeploymentEvidence({
       migrationsApplied: verification.migrationsApplied,
-      preflightChecks: preflight.checks, recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks,
-      rollbackChecks: rollback.checks,
+      preflightChecks: preflight.checks, recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks, rollbackChecks: rollback.checks,
     })
     if (!evidence.ready) throw new Error('database release evidence is incomplete')
+
     const releaseTimestamp = new Date().toISOString()
-    const releaseCommitSha = env.RELEASE_COMMIT_SHA?.trim()
+    const releaseCommitSha = config.releaseCommitSha
     const policy = evaluatePostgresReleasePolicy({
-      environment: config.environment, evidenceReady: evidence.ready,
-      migrationsApplied: verification.migrationsApplied,
+      environment: config.environment, evidenceReady: evidence.ready, deploymentPreflightReady: preflight.ready,
+      deploymentVerificationReady: verification.ready, migrationsApplied: verification.migrationsApplied,
       expectedMigrationBaseline: config.expectedMigrationBaseline,
       migrationBaselineVerified: verification.migrationsApplied >= config.expectedMigrationBaseline,
-      rollbackReady: rollback.ready,
-      releaseId: config.releaseId, releaseTimestamp, releaseCommitSha,
+      rollbackReady: rollback.ready, releaseId: config.releaseId, releaseTimestamp, releaseCommitSha,
+      verificationChecks: evidence.checks, readinessLatencyMs: health.latencyMs,
+      ...(config.healthMaxLatencyMs !== undefined ? { maxReadinessLatencyMs: config.healthMaxLatencyMs } : {}),
     })
     if (!policy.releasable) throw new Error(policy.reasons.join('; '))
+
     const audit = createPostgresReleaseAuditRecord({
       environment: config.environment, evidenceReady: evidence.ready, releaseApproved: policy.releasable,
-      migrationsApplied: verification.migrationsApplied, checks: evidence.checks,
-      releaseId: config.releaseId, createdAt: releaseTimestamp,
-      expectedMigrationBaseline: config.expectedMigrationBaseline, releaseCommitSha,
+      migrationsApplied: verification.migrationsApplied, checks: evidence.checks, releaseId: config.releaseId,
+      createdAt: releaseTimestamp, expectedMigrationBaseline: config.expectedMigrationBaseline, releaseCommitSha,
     })
     assertPostgresCiReleaseEvidence(audit, config.expectedMigrationBaseline, {
-      releaseId: config.releaseId,
-      ...(releaseCommitSha ? { releaseCommitSha } : {}),
+      releaseId: config.releaseId, ...(releaseCommitSha ? { releaseCommitSha } : {}),
     })
     return {
       migrations, readiness: verification.readiness, healthLatencyMs: health.latencyMs,
-      migrationsApplied: verification.migrationsApplied,
-      preflightChecks: preflight.checks, recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks,
-      rollbackChecks: rollback.checks,
-      releaseEvidenceReady: evidence.ready, releaseApproved: policy.releasable,
-      releaseAuditEvent: audit.event, releaseId: config.releaseId, releaseTimestamp,
-      expectedMigrationBaseline: config.expectedMigrationBaseline, releaseCommitSha,
+      migrationsApplied: verification.migrationsApplied, preflightChecks: preflight.checks,
+      recoveryChecks: recovery.checks, postRestoreChecks: postRestore.checks, rollbackChecks: rollback.checks,
+      releaseEvidenceReady: evidence.ready, releaseApproved: policy.releasable, releaseAuditEvent: audit.event,
+      releaseId: config.releaseId, releaseTimestamp, expectedMigrationBaseline: config.expectedMigrationBaseline, releaseCommitSha,
     }
   } finally {
     await pool.end()
