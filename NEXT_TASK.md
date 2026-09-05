@@ -1,22 +1,10 @@
 # Next Autonomous Task
 
-## Phase 7 — Hardening
-
 ## Status
-IN PROGRESS
+AUTOMATED DEVELOPMENT PHASES COMPLETE
 
-## Verified Baseline
-- Phase 6 production readiness baseline: COMPLETE / VERIFIED
-- Release evidence freshness: COMPLETE
-- Release ↔ readiness evidence skew guard: COMPLETE
-- Release ↔ commit timestamp consistency guard: COMPLETE
-- Commit SHA evidence consistency guard: COMPLETE
-- Latest Server CI: SUCCESS
-- Commit: 6d8b63d8e3af14f0be150a44c6f88669122fcee5
-- Run ID: 33842030428
-
-## Next Work
-Continue production hardening: operational safeguards, deployment readiness, and final release gates. Inspect the existing implementation and tests before selecting the next safeguard; do not invent completion status.
+## Remaining External Gate
+Manual UAT in a deployed UAT environment.
 
 ## Rule
-Inspect -> Implement -> Test -> Typecheck -> Build -> Lint -> Commit -> Push -> Server CI -> Update Status.
+Do not claim UAT passed until UAT_CHECKLIST.md is executed and results are recorded.
