@@ -1,0 +1,3 @@
+import{describe,expect,it}from'vitest'
+import{assertInsightTenant,createInsight,forecastNext}from'./aiCopilot'
+describe('AI copilot forecast insight',()=>{it('forecasts',()=>expect(forecastNext({history:[100,110,120]})).toBeGreaterThan(0));it('validates confidence',()=>expect(()=>createInsight('t1','alert','x',2)).toThrow());it('isolates insight',()=>expect(()=>assertInsightTenant(createInsight('t1','forecast','x',.9),'t2')).toThrow())})

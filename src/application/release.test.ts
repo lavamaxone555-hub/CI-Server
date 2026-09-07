@@ -1,0 +1,3 @@
+import{describe,expect,it}from'vitest'
+import{approveRelease,canPromote,deployRelease,rollbackRelease,type Release}from'./release'
+describe('release deployment',()=>{const r:Release={id:'r1',version:'1.0.0',environment:'staging',status:'draft',artifact:'a'};it('approves and deploys',()=>expect(deployRelease(approveRelease(r)).status).toBe('deployed'));it('requires approval',()=>expect(()=>deployRelease(r)).toThrow());it('promotes healthy',()=>expect(canPromote({releaseId:'r1',environment:'production',health:'healthy'})).toBe(true));it('rolls back deployed',()=>expect(rollbackRelease(deployRelease(approveRelease(r))).status).toBe('rolled_back'))})

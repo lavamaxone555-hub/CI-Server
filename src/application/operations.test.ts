@@ -1,0 +1,3 @@
+import{describe,expect,it}from'vitest'
+import{assertOpsTenant,backupEligible,healthy,transitionBackup}from'./operations'
+describe('operations backup monitoring',()=>{it('checks health',()=>expect(healthy([{service:'db',status:'healthy',checkedAt:'x'}])).toBe(true));it('isolates tenant',()=>expect(()=>assertOpsTenant({id:'b',tenantId:'t1',status:'pending',createdAt:'x'},'t2')).toThrow());it('transitions backup',()=>expect(transitionBackup({id:'b',tenantId:'t',status:'pending',createdAt:'x'},'running').status).toBe('running'));it('allows retry',()=>expect(backupEligible({id:'b',tenantId:'t',status:'failed',createdAt:'x'})).toBe(true))})

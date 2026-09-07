@@ -1,0 +1,3 @@
+import{describe,expect,it}from'vitest'
+import{evaluateReadiness,requireProductionReady,smokeTest}from'./productionReadiness'
+describe('production readiness',()=>{it('passes healthy checks',()=>expect(smokeTest([{name:'db',passed:true,required:true}])).toBe(true));it('reports failed required checks',()=>expect(evaluateReadiness([{name:'build',passed:false,required:true}]).failed).toEqual(['build']));it('blocks non-ready production',()=>expect(()=>requireProductionReady([{name:'security',passed:false,required:true}])).toThrow())})

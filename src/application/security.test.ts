@@ -1,0 +1,3 @@
+import{describe,expect,it}from'vitest'
+import{allowRateLimit,assertTenantScope,validateRequired,validateString}from'./security'
+describe('security validation rate limit',()=>{it('requires values',()=>expect(()=>validateRequired('', 'x')).toThrow());it('validates strings',()=>expect(validateString(' ok ','name')).toBe('ok'));it('limits requests',()=>{let w={key:'k',limit:1,count:0,resetAt:Date.now()+60000};w=allowRateLimit(w);expect(()=>allowRateLimit(w)).toThrow()});it('enforces tenant scope',()=>expect(()=>assertTenantScope('a','b')).toThrow())})

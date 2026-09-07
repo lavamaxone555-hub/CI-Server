@@ -1,0 +1,3 @@
+import{describe,expect,it}from'vitest'
+import{assertAuditTenant,createAuditEvent,createNotification,markNotificationRead}from'./auditNotification'
+describe('audit log notification',()=>{it('creates audit event',()=>expect(createAuditEvent({tenantId:'t1',action:'order.create',resource:'order',metadata:{}}).tenantId).toBe('t1'));it('isolates audit tenant',()=>expect(()=>assertAuditTenant(createAuditEvent({tenantId:'t1',action:'x',resource:'y',metadata:{}}),'t2')).toThrow());it('marks notification read',()=>expect(markNotificationRead(createNotification({tenantId:'t1',channel:'in_app',message:'hello'})).read).toBe(true))})
